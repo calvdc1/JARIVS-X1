@@ -691,7 +691,7 @@ export const useLiveAPI = () => {
     try {
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
-        throw new Error("GEMINI_API_KEY is missing. Please set it in the environment.");
+        throw new Error("GEMINI_API_KEY. AIzaSyB4n8lKtHs-DuAEzmaWO8gCrbt_xkpx5RY.");
       }
       const ai = new GoogleGenAI({ apiKey });
       const activePersonality = personalities.find(p => p.id === activePersonalityId);
