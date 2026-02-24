@@ -8,46 +8,40 @@ import path from "path";
 
 dotenv.config();
 
+declare global {
+  namespace Express {
+    interface Request {
+      sessionId?: string;
+    }
+  }
+}
+
 const app = express();
 const PORT = 3000;
-const MEMORY_FILE = path.join(process.cwd(), "memories.json");
-const PERSONALITIES_FILE = path.join(process.cwd(), "personalities.json");
-const MESSAGES_FILE = path.join(process.cwd(), "messages.json");
-const STATE_FILE = path.join(process.cwd(), "state.json");
-const AUTOMATIONS_FILE = path.join(process.cwd(), "automations.json");
-const GOALS_FILE = path.join(process.cwd(), "goals.json");
-const LEARNING_FILE = path.join(process.cwd(), "learning.json");
-const DECISIONS_FILE = path.join(process.cwd(), "decisions.json");
-const GRAPH_FILE = path.join(process.cwd(), "graph.json");
+const DATA_DIR = path.join(process.cwd(), "data");
 
-// Initialize files if they don't exist
-const initFile = (file: string, defaultValue: any) => {
-  if (!fs.existsSync(file)) {
-    fs.writeFileSync(file, JSON.stringify(defaultValue, null, 2));
+// Ensure data directory exists
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR);
+}
+
+// Helper to get user-specific file path
+const getUserFile = (sessionId: string, fileName: string) => {
+  const userDir = path.join(DATA_DIR, sessionId);
+  if (!fs.existsSync(userDir)) {
+    fs.mkdirSync(userDir);
   }
+  return path.join(userDir, fileName);
 };
 
-initFile(MEMORY_FILE, []);
-initFile(MESSAGES_FILE, []);
-initFile(STATE_FILE, { 
-  currentView: 'main', 
-  activePersonalityId: 'jarvis', 
-  workspaceMode: 'chat',
-  cognitiveStyle: 'balanced',
-  userProfile: { 
-    name: 'Sir', 
-    xp: 0, 
-    level: 1, 
-    streak: 0,
-    achievements: [],
-    preferences: {} 
+// Initialize files if they don't exist
+const initUserFile = (sessionId: string, fileName: string, defaultValue: any) => {
+  const filePath = getUserFile(sessionId, fileName);
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, JSON.stringify(defaultValue, null, 2));
   }
-});
-initFile(AUTOMATIONS_FILE, []);
-initFile(GOALS_FILE, []);
-initFile(LEARNING_FILE, { curriculum: [], progress: {} });
-initFile(DECISIONS_FILE, []);
-initFile(GRAPH_FILE, { nodes: [], links: [] });
+  return filePath;
+};
 
 const defaultPersonalities = [
   {
@@ -70,20 +64,110 @@ const defaultPersonalities = [
   }
 ];
 
-if (!fs.existsSync(PERSONALITIES_FILE)) {
-  fs.writeFileSync(PERSONALITIES_FILE, JSON.stringify({
-    activeId: "jarvis",
-    profiles: defaultPersonalities
-  }));
-}
+const getDefaultState = () => ({ 
+  currentView: 'main', 
+  activePersonalityId: 'jarvis', 
+  workspaceMode: 'chat',
+  cognitiveStyle: 'balanced',
+  userProfile: { 
+    name: 'Sir', 
+    xp: 0, 
+    level: 1, 
+    streak: 0,
+    achievements: [],
+    preferences: {} 
+  }
+});
 
 app.use(express.json());
 app.use(cookieParser());
 
+// Session Middleware
+app.use((req, res, next) => {
+  let sessionId = req.cookies.session_id;
+  if (!sessionId) {
+    sessionId = Math.random().toString(36).substring(2, 15);
+    res.cookie("session_id", sessionId, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+    });
+  }
+  req.sessionId = sessionId;
+  
+  // Initialize user data if needed
+  initUserFile(sessionId, "personalities.json", {
+    activeId: "jarvis",
+    profiles: defaultPersonalities
+  });
+  initUserFile(sessionId, "messages.json", []);
+  initUserFile(sessionId, "state.json", getDefaultState());
+  initUserFile(sessionId, "memories.json", []);
+  initUserFile(sessionId, "automations.json", []);
+  initUserFile(sessionId, "goals.json", []);
+  initUserFile(sessionId, "learning.json", { curriculum: [], progress: {} });
+  initUserFile(sessionId, "decisions.json", []);
+  initUserFile(sessionId, "graph.json", { nodes: [], links: [] });
+  initUserFile(sessionId, "runs.json", []);
+  initUserFile(sessionId, "food.json", []);
+  
+  next();
+});
+
+// Running Tracker Routes
+app.get("/api/runs", (req, res) => {
+  try {
+    const filePath = getUserFile(req.sessionId!, "runs.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load runs" });
+  }
+});
+
+app.post("/api/runs", (req, res) => {
+  try {
+    const filePath = getUserFile(req.sessionId!, "runs.json");
+    const runs = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    const newRun = { id: Date.now(), timestamp: new Date().toISOString(), ...req.body };
+    runs.push(newRun);
+    fs.writeFileSync(filePath, JSON.stringify(runs, null, 2));
+    res.json(newRun);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to save run" });
+  }
+});
+
+// Food Tracker Routes
+app.get("/api/food", (req, res) => {
+  try {
+    const filePath = getUserFile(req.sessionId!, "food.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load food logs" });
+  }
+});
+
+app.post("/api/food", (req, res) => {
+  try {
+    const filePath = getUserFile(req.sessionId!, "food.json");
+    const logs = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    const newLog = { id: Date.now(), timestamp: new Date().toISOString(), ...req.body };
+    logs.push(newLog);
+    fs.writeFileSync(filePath, JSON.stringify(logs, null, 2));
+    res.json(newLog);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to save food log" });
+  }
+});
+
 // Personality Routes
 app.get("/api/personalities", (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(PERSONALITIES_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "personalities.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to load personalities" });
@@ -93,10 +177,11 @@ app.get("/api/personalities", (req, res) => {
 app.post("/api/personalities/active", (req, res) => {
   try {
     const { id } = req.body;
-    const data = JSON.parse(fs.readFileSync(PERSONALITIES_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "personalities.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     if (data.profiles.find((p: any) => p.id === id)) {
       data.activeId = id;
-      fs.writeFileSync(PERSONALITIES_FILE, JSON.stringify(data, null, 2));
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
       res.json({ success: true, activeId: id });
     } else {
       res.status(404).json({ error: "Personality not found" });
@@ -109,7 +194,8 @@ app.post("/api/personalities/active", (req, res) => {
 // Message Routes
 app.get("/api/messages", (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(MESSAGES_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "messages.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to load messages" });
@@ -119,12 +205,12 @@ app.get("/api/messages", (req, res) => {
 app.post("/api/messages", (req, res) => {
   try {
     const { role, text } = req.body;
-    const messages = JSON.parse(fs.readFileSync(MESSAGES_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "messages.json");
+    const messages = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     const newMessage = { role, text, timestamp: new Date().toISOString() };
     messages.push(newMessage);
-    // Keep only last 50 messages to prevent file bloat
     const trimmed = messages.slice(-50);
-    fs.writeFileSync(MESSAGES_FILE, JSON.stringify(trimmed, null, 2));
+    fs.writeFileSync(filePath, JSON.stringify(trimmed, null, 2));
     res.json(newMessage);
   } catch (error) {
     res.status(500).json({ error: "Failed to save message" });
@@ -134,7 +220,8 @@ app.post("/api/messages", (req, res) => {
 // State Routes
 app.get("/api/state", (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "state.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to load state" });
@@ -143,9 +230,10 @@ app.get("/api/state", (req, res) => {
 
 app.post("/api/state", (req, res) => {
   try {
-    const currentState = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "state.json");
+    const currentState = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     const newState = { ...currentState, ...req.body };
-    fs.writeFileSync(STATE_FILE, JSON.stringify(newState, null, 2));
+    fs.writeFileSync(filePath, JSON.stringify(newState, null, 2));
     res.json(newState);
   } catch (error) {
     res.status(500).json({ error: "Failed to save state" });
@@ -155,7 +243,8 @@ app.post("/api/state", (req, res) => {
 // Memory Routes
 app.get("/api/memories", (req, res) => {
   try {
-    const memories = JSON.parse(fs.readFileSync(MEMORY_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "memories.json");
+    const memories = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     res.json(memories);
   } catch (error) {
     res.status(500).json({ error: "Failed to load memories" });
@@ -165,7 +254,8 @@ app.get("/api/memories", (req, res) => {
 app.post("/api/memories", (req, res) => {
   try {
     const { content, category } = req.body;
-    const memories = JSON.parse(fs.readFileSync(MEMORY_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "memories.json");
+    const memories = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     const newMemory = {
       id: Date.now(),
       content,
@@ -173,7 +263,7 @@ app.post("/api/memories", (req, res) => {
       timestamp: new Date().toISOString()
     };
     memories.push(newMemory);
-    fs.writeFileSync(MEMORY_FILE, JSON.stringify(memories, null, 2));
+    fs.writeFileSync(filePath, JSON.stringify(memories, null, 2));
     res.json(newMemory);
   } catch (error) {
     res.status(500).json({ error: "Failed to save memory" });
@@ -183,7 +273,8 @@ app.post("/api/memories", (req, res) => {
 // Automation Routes
 app.get("/api/automations", (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(AUTOMATIONS_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "automations.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to load automations" });
@@ -192,10 +283,11 @@ app.get("/api/automations", (req, res) => {
 
 app.post("/api/automations", (req, res) => {
   try {
-    const automations = JSON.parse(fs.readFileSync(AUTOMATIONS_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "automations.json");
+    const automations = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     const newAutomation = { id: Date.now(), ...req.body };
     automations.push(newAutomation);
-    fs.writeFileSync(AUTOMATIONS_FILE, JSON.stringify(automations, null, 2));
+    fs.writeFileSync(filePath, JSON.stringify(automations, null, 2));
     res.json(newAutomation);
   } catch (error) {
     res.status(500).json({ error: "Failed to save automation" });
@@ -205,7 +297,8 @@ app.post("/api/automations", (req, res) => {
 // Goal Routes
 app.get("/api/goals", (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(GOALS_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "goals.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to load goals" });
@@ -214,10 +307,11 @@ app.get("/api/goals", (req, res) => {
 
 app.post("/api/goals", (req, res) => {
   try {
-    const goals = JSON.parse(fs.readFileSync(GOALS_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "goals.json");
+    const goals = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     const newGoal = { id: Date.now(), status: 'active', progress: 0, steps: [], ...req.body };
     goals.push(newGoal);
-    fs.writeFileSync(GOALS_FILE, JSON.stringify(goals, null, 2));
+    fs.writeFileSync(filePath, JSON.stringify(goals, null, 2));
     res.json(newGoal);
   } catch (error) {
     res.status(500).json({ error: "Failed to save goal" });
@@ -227,7 +321,8 @@ app.post("/api/goals", (req, res) => {
 // Learning Routes
 app.get("/api/learning", (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(LEARNING_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "learning.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to load learning data" });
@@ -236,9 +331,10 @@ app.get("/api/learning", (req, res) => {
 
 app.post("/api/learning/progress", (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(LEARNING_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "learning.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     data.progress = { ...data.progress, ...req.body };
-    fs.writeFileSync(LEARNING_FILE, JSON.stringify(data, null, 2));
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to save learning progress" });
@@ -248,7 +344,8 @@ app.post("/api/learning/progress", (req, res) => {
 // Decision Routes
 app.get("/api/decisions", (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(DECISIONS_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "decisions.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to load decisions" });
@@ -257,10 +354,11 @@ app.get("/api/decisions", (req, res) => {
 
 app.post("/api/decisions", (req, res) => {
   try {
-    const decisions = JSON.parse(fs.readFileSync(DECISIONS_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "decisions.json");
+    const decisions = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     const newDecision = { id: Date.now(), timestamp: new Date().toISOString(), ...req.body };
     decisions.push(newDecision);
-    fs.writeFileSync(DECISIONS_FILE, JSON.stringify(decisions, null, 2));
+    fs.writeFileSync(filePath, JSON.stringify(decisions, null, 2));
     res.json(newDecision);
   } catch (error) {
     res.status(500).json({ error: "Failed to save decision" });
@@ -270,7 +368,8 @@ app.post("/api/decisions", (req, res) => {
 // Graph Routes
 app.get("/api/graph", (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(GRAPH_FILE, "utf-8"));
+    const filePath = getUserFile(req.sessionId!, "graph.json");
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: "Failed to load graph" });
@@ -279,12 +378,14 @@ app.get("/api/graph", (req, res) => {
 
 app.post("/api/graph/sync", (req, res) => {
   try {
-    fs.writeFileSync(GRAPH_FILE, JSON.stringify(req.body, null, 2));
+    const filePath = getUserFile(req.sessionId!, "graph.json");
+    fs.writeFileSync(filePath, JSON.stringify(req.body, null, 2));
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: "Failed to sync graph" });
   }
 });
+
 
 // Spotify OAuth Config
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;

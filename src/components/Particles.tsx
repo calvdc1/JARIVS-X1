@@ -42,7 +42,7 @@ export const Particles: React.FC = () => {
 
       draw() {
         if (!ctx) return;
-        ctx.fillStyle = `rgba(0, 242, 255, ${this.opacity})`;
+        ctx.fillStyle = `rgba(255, 42, 0, ${this.opacity})`;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
