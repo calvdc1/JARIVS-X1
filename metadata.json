@@ -1,0 +1,7 @@
+{
+  "name": "JARVIS",
+  "description": "A futuristic, voice-activated AI assistant inspired by Jarvis. Features real-time voice interaction, Spotify music control, and holographic image presentation.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
