@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, User, Bot, Terminal, Maximize2, Minimize2 } from 'lucide-react';
+import { Send, User, Bot, Terminal, Maximize2, Minimize2, ImagePlus } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface Message {
@@ -11,13 +11,15 @@ interface Message {
 interface ChatSystemProps {
   messages: Message[];
   onSendMessage: (text: string) => void;
+  onAttachImage?: (file: File, prompt: string) => void;
   isProcessing: boolean;
 }
 
-export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage, isProcessing }) => {
+export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage, onAttachImage, isProcessing }) => {
   const [input, setInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -33,18 +35,26 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
     }
   };
 
+  const handleAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onAttachImage || isProcessing) return;
+    const prompt = input.trim() || 'Analyze this image in detail and give actionable insights.';
+    onAttachImage(file, prompt);
+    setInput('');
+    e.target.value = '';
+  };
+
   return (
-    <motion.div 
+    <motion.div
       layout
       className={`glass-panel flex flex-col overflow-hidden transition-all duration-500 ${isExpanded ? 'fixed inset-4 z-50' : 'w-full h-full'}`}
     >
-      {/* Header */}
       <div className="p-3 border-b border-jarvis-blue/20 flex items-center justify-between bg-jarvis-blue/5">
         <div className="flex items-center gap-2">
           <Terminal size={14} className="text-jarvis-blue" />
           <span className="text-[10px] font-display uppercase tracking-widest text-jarvis-blue">Neural Link Console</span>
         </div>
-        <button 
+        <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-jarvis-blue"
         >
@@ -52,8 +62,7 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
         </button>
       </div>
 
-      {/* Messages */}
-      <div 
+      <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
       >
@@ -70,8 +79,8 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
                   {msg.role === 'user' ? <User size={14} className="text-jarvis-blue" /> : <Bot size={14} className="text-white/60" />}
                 </div>
                 <div className={`p-3 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === 'user' 
-                    ? 'bg-jarvis-blue/10 border border-jarvis-blue/20 text-white' 
+                  msg.role === 'user'
+                    ? 'bg-jarvis-blue/10 border border-jarvis-blue/20 text-white'
                     : 'bg-white/5 border border-white/10 text-white/80'
                 }`}>
                   <div className="markdown-body prose prose-invert prose-sm max-w-none">
@@ -83,7 +92,7 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
           ))}
         </AnimatePresence>
         {isProcessing && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="flex justify-start"
@@ -107,17 +116,31 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
         )}
       </div>
 
-      {/* Input */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-jarvis-blue/20 bg-black/20">
-        <div className="relative flex items-center">
+        <div className="relative flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+            className="p-2 border border-white/10 rounded-lg text-jarvis-blue hover:bg-jarvis-blue/10 transition-colors"
+            title="Attach photo"
+          >
+            <ImagePlus size={18} />
+          </button>
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAttach}
+          />
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a command or question..."
+            placeholder="Ask anything, build AI workflows, generate images/videos..."
             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm focus:outline-none focus:border-jarvis-blue/50 transition-colors placeholder:text-white/20"
           />
-          <button 
+          <button
             type="submit"
             disabled={isProcessing || !input.trim()}
             className="absolute right-2 p-2 text-jarvis-blue hover:bg-jarvis-blue/10 rounded-lg transition-all disabled:opacity-30 disabled:hover:bg-transparent"

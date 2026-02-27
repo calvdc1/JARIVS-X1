@@ -27,6 +27,8 @@ export const JarvisUI: React.FC = () => {
     connect, 
     disconnect, 
     isSpeaking, 
+    audioLevel,
+    audioHealth,
     isSpotifyConnected, 
     presentedImage, 
     setPresentedImage,
@@ -46,6 +48,7 @@ export const JarvisUI: React.FC = () => {
     messages,
     spotifyTrack,
     sendTextContext,
+    sendMultimodalContext,
     transferPlayback,
     userProfile,
     automations,
@@ -68,7 +71,6 @@ export const JarvisUI: React.FC = () => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [greeting, setGreeting] = useState('');
   const [osModule, setOsModule] = useState<'memory' | 'automation' | 'goals' | 'learning' | 'team' | 'decisions' | 'graph' | 'autopsy' | 'models' | 'running' | 'food'>('memory');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTargets = [
     { label: 'Android APK', href: '/downloads/jarvis-android.apk' },
@@ -132,6 +134,18 @@ export const JarvisUI: React.FC = () => {
     reader.readAsText(file);
   };
 
+  const handleChatImageUpload = (file: File, prompt: string) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64Data = result.split(',')[1];
+      if (!base64Data) return;
+      sendMultimodalContext(prompt, base64Data, file.type || 'image/png');
+      setLogs(prev => [`[SYSTEM] Image attached: ${file.name}`, ...prev]);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCommand = (cmd: string) => {
     if (cmd === 'main-view') setCurrentView('main');
     else if (cmd === 'workshop-view') setCurrentView('workshop');
@@ -158,9 +172,10 @@ export const JarvisUI: React.FC = () => {
             </div>
           </div>
 
-          <div className="border-t border-white/10 pt-2">
+          <div className="border-t border-white/10 pt-2 space-y-1">
             <p className="text-[9px] md:text-[10px] font-display tracking-[0.18em] text-jarvis-accent uppercase">Jarvis ONEMSU</p>
             <p className="text-[8px] font-mono text-white/35 uppercase tracking-widest">Neural Interface</p>
+            <p className="text-[8px] font-mono text-white/55">AI Builder • Advanced Q&A • Image/Video Prompting</p>
           </div>
 
           <div className="grid grid-cols-1 gap-1.5">
@@ -169,6 +184,9 @@ export const JarvisUI: React.FC = () => {
             </div>
             <div className="glass-panel px-2 py-1 border-white/5">
               <span className="text-[9px] font-display text-emerald-300 uppercase">Streak {userProfile.streak}D</span>
+            </div>
+            <div className="glass-panel px-2 py-1 border-white/5">
+              <span className="text-[8px] font-mono text-white/70 uppercase">Buffer {Math.round(audioHealth.bufferMs)}ms · Delay {Math.round(audioHealth.latencyMs)}ms · Stutter {audioHealth.stutterEvents}</span>
             </div>
           </div>
 
@@ -421,12 +439,25 @@ export const JarvisUI: React.FC = () => {
                     />
                   )}
                   
-                  <img 
-                    src="/jarvis-logo.svg" 
-                    alt="JARVIS Core" 
-                    className="w-full h-full object-contain mix-blend-screen"
-                    referrerPolicy="no-referrer"
-                  />
+                  <div className="absolute inset-3 rounded-full border border-jarvis-accent/25 bg-black/80 flex items-center justify-center overflow-hidden">
+                    <div className="flex items-end gap-1 h-16 md:h-20">
+                      {[...Array(24)].map((_, i) => {
+                        const base = 8 + ((i % 5) * 4);
+                        const peak = base + (audioLevel * 42) + ((i % 3) * 7);
+                        return (
+                          <motion.div
+                            key={`wave-${i}`}
+                            animate={{
+                              height: isSpeaking ? [base, peak, base + 4] : [6, 10, 6],
+                              opacity: isSpeaking ? [0.45, 1, 0.45] : [0.2, 0.45, 0.2]
+                            }}
+                            transition={{ duration: 0.32, repeat: Infinity, ease: 'easeInOut', delay: i * 0.02 }}
+                            className="w-1 rounded-full bg-jarvis-accent shadow-[0_0_10px_rgba(230,197,106,0.8)]"
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
                   
                   {/* Internal Glow */}
                   {isConnected && (
@@ -661,7 +692,8 @@ export const JarvisUI: React.FC = () => {
           >
             <ChatSystem 
               messages={messages} 
-              onSendMessage={sendTextContext} 
+              onSendMessage={sendTextContext}
+              onAttachImage={handleChatImageUpload}
               isProcessing={isProcessing} 
             />
             <button 
