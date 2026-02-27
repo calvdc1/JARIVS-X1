@@ -141,79 +141,72 @@ export const JarvisUI: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-[100dvh] bg-jarvis-dark flex flex-col items-center justify-center p-3 md:p-6 relative overflow-hidden">
+    <div className="w-full min-h-[100dvh] bg-jarvis-dark flex flex-col items-center justify-center pt-[9.5rem] md:pt-32 p-3 md:p-6 relative overflow-hidden">
       <Particles />
       
       <WorkspaceHUD mode={workspaceMode} isProcessing={isProcessing} />
 
-      {/* Back Button */}
-      <AnimatePresence>
-        {currentView !== 'main' && (
-          <motion.button
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            onClick={() => setCurrentView('main')}
-            className="fixed top-24 md:top-32 left-4 md:left-6 z-40 p-2 md:p-3 rounded-xl glass-panel border-white/10 text-white/40 hover:text-jarvis-accent hover:border-jarvis-accent/30 transition-all flex items-center gap-2 group"
-          >
-            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="text-[8px] md:text-[10px] font-display uppercase tracking-widest">Back</span>
-          </motion.button>
-        )}
-      </AnimatePresence>
-      
+      <div className="fixed top-3 md:top-4 left-3 right-3 md:left-6 md:right-6 z-40 glass-panel border-white/10 px-3 py-2 md:px-4 md:py-3">
+        <div className="flex flex-col gap-2 md:gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              {currentView !== 'main' && (
+                <button
+                  onClick={() => setCurrentView('main')}
+                  className="p-2 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:text-jarvis-accent hover:border-jarvis-accent/40 transition-all flex items-center gap-1"
+                >
+                  <ArrowLeft size={14} />
+                  <span className="text-[9px] font-display uppercase tracking-widest">Back</span>
+                </button>
+              )}
+              <div className="min-w-0">
+                <p className="text-[8px] md:text-[10px] font-mono text-white/40 uppercase tracking-widest truncate">{greeting}, {userProfile.name}</p>
+                <p className="text-xs md:text-sm font-display text-jarvis-accent">{phTime}</p>
+              </div>
+            </div>
+
+            <div className="text-center md:text-right">
+              <p className="text-[10px] md:text-xs font-display tracking-[0.25em] text-jarvis-accent uppercase">Jarvis ONEMSU</p>
+              <p className="text-[8px] md:text-[10px] font-mono text-white/35 uppercase tracking-widest">Neural Interface Active</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="glass-panel px-2.5 py-1.5 border-white/5">
+                <span className="text-[9px] font-display text-amber-300 uppercase">Lvl {userProfile.level} · {userProfile.xp} XP</span>
+              </div>
+              <div className="glass-panel px-2.5 py-1.5 border-white/5">
+                <span className="text-[9px] font-display text-emerald-300 uppercase">Streak {userProfile.streak}D</span>
+              </div>
+              <div className="w-8 h-8 rounded-full border border-jarvis-accent/30 flex items-center justify-center bg-jarvis-accent/5">
+                <Activity size={14} className="text-jarvis-accent animate-pulse" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 text-jarvis-accent">
+              <Download size={13} />
+              <span className="text-[9px] md:text-[10px] font-display uppercase tracking-widest text-white/70">Download Builds</span>
+            </div>
+            {downloadTargets.map((target) => (
+              <a
+                key={target.label}
+                href={target.href}
+                download
+                className="text-[10px] md:text-xs px-2.5 py-1.5 rounded-md border border-jarvis-accent/30 bg-jarvis-accent/10 text-jarvis-accent hover:bg-jarvis-accent/20 transition-colors"
+              >
+                {target.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <CommandPalette 
         isOpen={isCommandPaletteOpen} 
         onClose={() => setIsCommandPaletteOpen(false)} 
         onCommand={handleCommand}
       />
-
-      <div className="fixed top-4 md:top-6 left-4 md:left-6 z-40 glass-panel border-white/10 px-2 py-2 md:px-3 md:py-3">
-        <div className="flex items-center gap-2 mb-2">
-          <Download size={14} className="text-jarvis-accent" />
-          <span className="text-[9px] md:text-[10px] font-display uppercase tracking-widest text-white/70">Download Builds</span>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          {downloadTargets.map((target) => (
-            <a
-              key={target.label}
-              href={target.href}
-              download
-              className="text-[10px] md:text-xs px-2.5 py-1.5 rounded-md border border-jarvis-accent/30 bg-jarvis-accent/10 text-jarvis-accent hover:bg-jarvis-accent/20 transition-colors"
-            >
-              {target.label}
-            </a>
-          ))}
-        </div>
-      </div>
-
-      <div className="fixed top-4 md:top-6 right-4 md:right-6 z-40 flex flex-col items-end gap-2 md:gap-3">
-        <div className="flex items-center gap-2 md:gap-3">
-          <div className="flex flex-col items-end">
-            <span className="text-[8px] md:text-[10px] font-mono text-white/40 uppercase tracking-widest">{greeting}, {userProfile.name}</span>
-            <span className="text-xs md:text-sm font-display text-jarvis-accent">{phTime}</span>
-          </div>
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full border border-jarvis-accent/30 flex items-center justify-center bg-jarvis-accent/5">
-            <Activity size={16} className="text-jarvis-accent animate-pulse" />
-          </div>
-        </div>
-
-        {/* Productivity Stats */}
-        <div className="flex gap-2">
-          <div className="glass-panel px-3 py-1.5 flex items-center gap-2 border-white/5">
-            <div className="flex flex-col items-end">
-              <span className="text-[6px] font-mono text-white/20 uppercase leading-none">Level {userProfile.level}</span>
-              <span className="text-[10px] font-display text-amber-400 uppercase">{userProfile.xp} XP</span>
-            </div>
-          </div>
-          <div className="glass-panel px-3 py-1.5 flex items-center gap-2 border-white/5">
-            <div className="flex flex-col items-end">
-              <span className="text-[6px] font-mono text-white/20 uppercase leading-none">Streak</span>
-              <span className="text-[10px] font-display text-emerald-400 uppercase">{userProfile.streak} Days</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Background Grid */}
       <div className="absolute inset-0 opacity-10 pointer-events-none" 
@@ -606,7 +599,7 @@ export const JarvisUI: React.FC = () => {
             </div>
             <div className="space-y-2">
               <h1 className="font-display text-xl md:text-2xl tracking-[0.2em] text-white uppercase gold-accent">
-                JARVIS X3
+                Jarvis ONEMSU
               </h1>
               <p className="text-white/40 font-mono text-[10px] uppercase tracking-widest">
                 Neural Interface Active
