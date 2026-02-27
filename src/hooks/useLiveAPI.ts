@@ -21,6 +21,8 @@ export const useLiveAPI = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [audioHealth, setAudioHealth] = useState({ bufferMs: 0, latencyMs: 0, stutterEvents: 0 });
   const [isBackgroundListening, setIsBackgroundListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
@@ -82,6 +84,16 @@ export const useLiveAPI = () => {
   const audioQueueRef = useRef<Float32Array[]>([]);
   const nextStartTimeRef = useRef<number>(0);
   const activeSourceNodesRef = useRef<AudioBufferSourceNode[]>([]);
+  const lastChunkTimeRef = useRef<number>(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setAudioLevel(prev => Math.max(0, prev * 0.9 - 0.01));
+      setAudioHealth(prev => ({ ...prev, bufferMs: Math.max(0, prev.bufferMs - 40) }));
+    }, 60);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Check Spotify status on mount and initialize Player
   useEffect(() => {
@@ -268,7 +280,7 @@ export const useLiveAPI = () => {
 
     const currentTime = audioContext.currentTime;
     if (nextStartTimeRef.current < currentTime) {
-      nextStartTimeRef.current = currentTime + 0.02; // Reduced buffer for lower latency
+      nextStartTimeRef.current = currentTime + 0.04; // Balanced buffer for lower stutter
     }
 
     source.start(nextStartTimeRef.current);
@@ -511,6 +523,23 @@ export const useLiveAPI = () => {
           turns: [{
             role: "user",
             parts: [{ text }]
+          }],
+          turnComplete: true
+        }
+      });
+    }
+  }, []);
+
+  const sendMultimodalContext = useCallback((text: string, base64ImageData: string, mimeType: string) => {
+    if (sessionRef.current) {
+      sessionRef.current.sendRealtimeInput({
+        clientContent: {
+          turns: [{
+            role: "user",
+            parts: [
+              { text },
+              { inlineData: { data: base64ImageData, mimeType } }
+            ]
           }],
           turnComplete: true
         }
@@ -1013,7 +1042,23 @@ export const useLiveAPI = () => {
                   for (let i = 0; i < pcmData.length; i++) {
                     floatData[i] = pcmData[i] / 32768.0;
                   }
+                  const now = Date.now();
+                  if (lastChunkTimeRef.current && now - lastChunkTimeRef.current > 450 && isSpeakingRef.current) {
+                    setAudioHealth(prev => ({ ...prev, stutterEvents: prev.stutterEvents + 1 }));
+                  }
+                  lastChunkTimeRef.current = now;
+
+                  let rms = 0;
+                  for (let i = 0; i < floatData.length; i += 24) {
+                    rms += floatData[i] * floatData[i];
+                  }
+                  rms = Math.sqrt(rms / Math.max(1, floatData.length / 24));
+                  setAudioLevel(prev => (prev * 0.35) + (Math.min(1, rms * 4) * 0.65));
+
                   audioQueueRef.current.push(floatData);
+                  const queuedMs = audioQueueRef.current.reduce((sum, chunk) => sum + (chunk.length / 24000) * 1000, 0);
+                  const latencyMs = audioContextRef.current ? Math.max(0, (nextStartTimeRef.current - audioContextRef.current.currentTime) * 1000) : 0;
+                  setAudioHealth(prev => ({ ...prev, bufferMs: queuedMs, latencyMs }));
                   shouldPlay = true;
                 }
                 if (part.text) {
@@ -1176,6 +1221,8 @@ export const useLiveAPI = () => {
       audioContextRef.current = null;
     }
     setIsConnected(false);
+    setAudioLevel(0);
+    setAudioHealth({ bufferMs: 0, latencyMs: 0, stutterEvents: 0 });
   }, []);
 
   return {
@@ -1185,6 +1232,8 @@ export const useLiveAPI = () => {
     disconnect,
     messages,
     isSpeaking,
+    audioLevel,
+    audioHealth,
     isSpotifyConnected,
     presentedImage,
     setPresentedImage,
@@ -1202,6 +1251,7 @@ export const useLiveAPI = () => {
     handleSwitchPersonality,
     spotifyTrack,
     sendTextContext,
+    sendMultimodalContext,
     transferPlayback,
     workspaceMode,
     setWorkspaceMode,
