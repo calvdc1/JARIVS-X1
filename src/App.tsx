@@ -7,7 +7,7 @@ import { JarvisUI } from './components/JarvisUI';
 
 export default function App() {
   return (
-    <main className="min-h-screen">
+    <main className="w-full min-h-[100dvh]">
       <JarvisUI />
     </main>
   );

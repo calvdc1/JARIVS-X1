@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mic, MicOff, Power, Shield, Activity, Cpu, Terminal, Music, Image as ImageIcon, X, Youtube, Dog, Database, Upload, MessageSquare, Command as CommandIcon, ArrowLeft } from 'lucide-react';
+import { Mic, MicOff, Power, Shield, Activity, Cpu, Terminal, Music, Image as ImageIcon, X, Youtube, Dog, Database, Upload, MessageSquare, Command as CommandIcon, ArrowLeft, Download } from 'lucide-react';
 import { useLiveAPI } from '../hooks/useLiveAPI';
 import YouTube from 'react-youtube';
 import { WorkshopDashboard } from './WorkshopDashboard';
@@ -70,6 +70,12 @@ export const JarvisUI: React.FC = () => {
   const [osModule, setOsModule] = useState<'memory' | 'automation' | 'goals' | 'learning' | 'team' | 'decisions' | 'graph' | 'autopsy' | 'models' | 'running' | 'food'>('memory');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const downloadTargets = [
+    { label: 'Android APK', href: '/downloads/jarvis-android.apk' },
+    { label: 'iOS XAPK', href: '/downloads/jarvis-ios.xapk' },
+    { label: 'PC EXE', href: '/downloads/jarvis-windows.exe' },
+  ];
+
   useEffect(() => {
     const updateGreeting = () => {
       const hour = new Date().getHours();
@@ -135,7 +141,7 @@ export const JarvisUI: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-jarvis-dark flex flex-col items-center justify-center p-4 md:p-6 relative overflow-hidden">
+    <div className="w-full min-h-[100dvh] bg-jarvis-dark flex flex-col items-center justify-center p-3 md:p-6 relative overflow-hidden">
       <Particles />
       
       <WorkspaceHUD mode={workspaceMode} isProcessing={isProcessing} />
@@ -161,6 +167,25 @@ export const JarvisUI: React.FC = () => {
         onClose={() => setIsCommandPaletteOpen(false)} 
         onCommand={handleCommand}
       />
+
+      <div className="fixed top-4 md:top-6 left-4 md:left-6 z-40 glass-panel border-white/10 px-2 py-2 md:px-3 md:py-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Download size={14} className="text-jarvis-accent" />
+          <span className="text-[9px] md:text-[10px] font-display uppercase tracking-widest text-white/70">Download Builds</span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {downloadTargets.map((target) => (
+            <a
+              key={target.label}
+              href={target.href}
+              download
+              className="text-[10px] md:text-xs px-2.5 py-1.5 rounded-md border border-jarvis-accent/30 bg-jarvis-accent/10 text-jarvis-accent hover:bg-jarvis-accent/20 transition-colors"
+            >
+              {target.label}
+            </a>
+          ))}
+        </div>
+      </div>
 
       <div className="fixed top-4 md:top-6 right-4 md:right-6 z-40 flex flex-col items-end gap-2 md:gap-3">
         <div className="flex items-center gap-2 md:gap-3">
@@ -221,7 +246,7 @@ export const JarvisUI: React.FC = () => {
                 y: { duration: 0.5 },
                 opacity: { duration: 0.3 }
               }}
-              className="relative max-w-5xl w-full aspect-video glass-panel overflow-hidden border-2 border-jarvis-accent/50 shadow-[0_0_100px_rgba(255,0,0,0.3)] perspective-1000"
+              className="relative max-w-5xl w-full aspect-video glass-panel overflow-hidden border-2 border-jarvis-accent/50 shadow-[0_0_100px_rgba(230,197,106,0.3)] perspective-1000"
               style={{ transformStyle: 'preserve-3d' }}
             >
               <motion.img 
@@ -241,7 +266,7 @@ export const JarvisUI: React.FC = () => {
                    style={{ backgroundImage: 'linear-gradient(var(--color-jarvis-accent) 1px, transparent 1px), linear-gradient(90deg, var(--color-jarvis-accent) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
               
               {/* Scanline Effect */}
-              <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_4px,3px_100%]" />
+              <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(230,197,106,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_4px,3px_100%]" />
               
               {/* Flicker Overlay */}
               <motion.div 
@@ -276,7 +301,7 @@ export const JarvisUI: React.FC = () => {
             exit={{ opacity: 0, scale: 0.8, y: 50 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/60 backdrop-blur-md"
           >
-            <div className="relative max-w-5xl w-full aspect-video glass-panel overflow-hidden border-2 border-red-500/50 shadow-[0_0_100px_rgba(255,0,0,0.2)]">
+            <div className="relative max-w-5xl w-full aspect-video glass-panel overflow-hidden border-2 border-jarvis-accent/50 shadow-[0_0_100px_rgba(230,197,106,0.2)]">
               <YouTube 
                 videoId={youtubeVideoId} 
                 className="w-full h-full"
@@ -298,8 +323,8 @@ export const JarvisUI: React.FC = () => {
               </button>
               
               <div className="absolute bottom-4 left-6 flex items-center gap-3 pointer-events-none">
-                <Youtube className="text-red-500" size={20} />
-                <span className="font-display text-xs tracking-widest text-red-500 uppercase">YouTube Neural Stream Active</span>
+                <Youtube className="text-jarvis-accent" size={20} />
+                <span className="font-display text-xs tracking-widest text-jarvis-accent uppercase">YouTube Neural Stream Active</span>
               </div>
             </div>
           </motion.div>
@@ -314,7 +339,7 @@ export const JarvisUI: React.FC = () => {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.05 }}
-            className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-6 z-10 px-4 md:px-0 justify-items-center"
+            className="w-full max-w-[1400px] min-h-[calc(100dvh-2rem)] md:min-h-[calc(100dvh-3rem)] grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 z-10 px-2 md:px-4 justify-items-center"
           >
             
             
@@ -369,12 +394,12 @@ export const JarvisUI: React.FC = () => {
               whileTap={{ scale: 0.95 }}
               animate={{
                 boxShadow: isSpeaking 
-                  ? "0 0 80px rgba(255, 0, 0, 0.8)" 
+                  ? "0 0 80px rgba(230, 197, 106, 0.8)" 
                   : isConnected 
-                    ? "0 0 60px rgba(255, 0, 0, 0.4)" 
+                    ? "0 0 60px rgba(230, 197, 106, 0.4)" 
                     : "0 0 20px rgba(255, 255, 255, 0.1)"
               }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 md:w-40 md:h-40 rounded-full bg-black border-2 border-jarvis-accent/30 flex items-center justify-center group cursor-pointer overflow-hidden z-20 shadow-[inset_0_0_20px_rgba(255,0,0,0.2)]"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 md:w-40 md:h-40 rounded-full bg-black border-2 border-jarvis-accent/30 flex items-center justify-center group cursor-pointer overflow-hidden z-20 shadow-[inset_0_0_20px_rgba(230,197,106,0.2)]"
             >
               <AnimatePresence mode="wait">
                 <motion.div
@@ -433,7 +458,7 @@ export const JarvisUI: React.FC = () => {
                               key={`mouth-${i}`}
                               animate={{ height: [6, 28, 10, 36, 6][i % 5], opacity: [0.4, 1, 0.4] }}
                               transition={{ duration: 0.35, repeat: Infinity, ease: "easeInOut", delay: i * 0.04 }}
-                              className="w-1.5 bg-jarvis-accent rounded-full shadow-[0_0_10px_rgba(255,0,0,0.8)]"
+                              className="w-1.5 bg-jarvis-accent rounded-full shadow-[0_0_10px_rgba(230,197,106,0.8)]"
                             />
                           ))}
                         </div>
@@ -451,7 +476,7 @@ export const JarvisUI: React.FC = () => {
                 <div 
                   className="absolute inset-0 rounded-full"
                   style={{
-                    background: "conic-gradient(from 0deg, rgba(255,0,0,0.22) 0%, transparent 60%, rgba(255,0,0,0.22) 100%)",
+                    background: "conic-gradient(from 0deg, rgba(230,197,106,0.22) 0%, transparent 60%, rgba(230,197,106,0.22) 100%)",
                     WebkitMaskImage: "radial-gradient(circle at center, transparent 48%, black 52%)",
                     maskImage: "radial-gradient(circle at center, transparent 48%, black 52%)",
                     opacity: 0.8
@@ -464,10 +489,10 @@ export const JarvisUI: React.FC = () => {
                 animate={{ rotate: 360 }}
                 transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
               >
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[130%] w-2 h-2 rounded-full bg-jarvis-accent shadow-[0_0_10px_rgba(255,0,0,0.8)]" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-[130%] w-2 h-2 rounded-full bg-jarvis-accent/80 shadow-[0_0_10px_rgba(255,0,0,0.6)]" />
-                <div className="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-[130%] w-2 h-2 rounded-full bg-jarvis-accent/60 shadow-[0_0_10px_rgba(255,0,0,0.5)]" />
-                <div className="absolute top-1/2 left-1/2 -translate-y-1/2 translate-x-[130%] w-2 h-2 rounded-full bg-jarvis-accent/60 shadow-[0_0_10px_rgba(255,0,0,0.5)]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[130%] w-2 h-2 rounded-full bg-jarvis-accent shadow-[0_0_10px_rgba(230,197,106,0.8)]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-[130%] w-2 h-2 rounded-full bg-jarvis-accent/80 shadow-[0_0_10px_rgba(230,197,106,0.6)]" />
+                <div className="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-[130%] w-2 h-2 rounded-full bg-jarvis-accent/60 shadow-[0_0_10px_rgba(230,197,106,0.5)]" />
+                <div className="absolute top-1/2 left-1/2 -translate-y-1/2 translate-x-[130%] w-2 h-2 rounded-full bg-jarvis-accent/60 shadow-[0_0_10px_rgba(230,197,106,0.5)]" />
               </motion.div>
               
               <div className="absolute inset-0 pointer-events-none">
@@ -510,7 +535,7 @@ export const JarvisUI: React.FC = () => {
                 className="absolute inset-0 rounded-full border border-jarvis-accent/30 pointer-events-none"
                 animate={{ scale: [0.95, 1.05, 0.95], opacity: [0.4, 0.8, 0.4] }}
                 transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                style={{ boxShadow: "0 0 30px rgba(255,0,0,0.25)" }}
+                style={{ boxShadow: "0 0 30px rgba(230,197,106,0.25)" }}
               />
               
               <motion.div 
@@ -521,7 +546,7 @@ export const JarvisUI: React.FC = () => {
                 <div 
                   className="absolute inset-0 rounded-full"
                   style={{
-                    background: "conic-gradient(from 0deg, transparent 0%, rgba(255,0,0,0.35) 8%, transparent 18%)",
+                    background: "conic-gradient(from 0deg, transparent 0%, rgba(230,197,106,0.35) 8%, transparent 18%)",
                     WebkitMaskImage: "radial-gradient(circle at center, transparent 45%, black 55%)",
                     maskImage: "radial-gradient(circle at center, transparent 45%, black 55%)"
                   }}
@@ -554,7 +579,7 @@ export const JarvisUI: React.FC = () => {
                   initial={{ top: "-100%" }}
                   animate={{ top: "200%" }}
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-x-0 h-1 bg-jarvis-accent/50 shadow-[0_0_15px_rgba(255,0,0,0.8)] z-30 pointer-events-none"
+                  className="absolute inset-x-0 h-1 bg-jarvis-accent/50 shadow-[0_0_15px_rgba(230,197,106,0.8)] z-30 pointer-events-none"
                 />
               )}
               
@@ -594,7 +619,7 @@ export const JarvisUI: React.FC = () => {
               onClick={() => setIsListening(!isListening)}
               className={`p-3 rounded-full border transition-all ${
                 isListening 
-                  ? 'bg-jarvis-accent/20 border-jarvis-accent text-jarvis-accent shadow-[0_0_15px_rgba(255,0,0,0.4)]' 
+                  ? 'bg-jarvis-accent/20 border-jarvis-accent text-jarvis-accent shadow-[0_0_15px_rgba(230,197,106,0.4)]' 
                   : 'bg-white/5 border-white/10 text-white/40'
               }`}
               title={isListening ? "Mute Microphone" : "Unmute Microphone"}
@@ -760,7 +785,7 @@ const OSModuleTab = ({ active, onClick, label }: { active: boolean, onClick: () 
     onClick={onClick}
     className={`px-6 py-3 rounded-xl font-display text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${
       active 
-        ? 'bg-jarvis-accent/20 text-jarvis-accent border border-jarvis-accent/30 shadow-[0_0_15px_rgba(255,0,0,0.2)]' 
+        ? 'bg-jarvis-accent/20 text-jarvis-accent border border-jarvis-accent/30 shadow-[0_0_15px_rgba(230,197,106,0.2)]' 
         : 'bg-white/5 text-white/40 border border-white/10 hover:bg-white/10'
     }`}
   >
@@ -771,7 +796,7 @@ const OSModuleTab = ({ active, onClick, label }: { active: boolean, onClick: () 
 const StatusIndicator = ({ label, active }: { label: string; active: boolean }) => (
   <div className="flex flex-col items-center gap-1 md:gap-1.5">
     <div className="relative">
-      <div className={`w-1 md:w-1.5 h-1 md:h-1.5 rounded-full transition-all duration-300 ${active ? 'bg-jarvis-accent shadow-[0_0_8px_rgba(255,0,0,0.8)]' : 'bg-white/10'}`} />
+      <div className={`w-1 md:w-1.5 h-1 md:h-1.5 rounded-full transition-all duration-300 ${active ? 'bg-jarvis-accent shadow-[0_0_8px_rgba(230,197,106,0.8)]' : 'bg-white/10'}`} />
       {active && (
         <motion.div 
           initial={{ scale: 1, opacity: 0.5 }}
@@ -793,6 +818,6 @@ const StatusItem = ({ label, value, active }: { label: string; value?: string; a
       <span className="text-[9px] md:text-[10px] font-mono text-white/40 uppercase leading-none mb-1">{label}</span>
       {value && <span className="text-[10px] md:text-xs font-display text-jarvis-accent uppercase tracking-wider">{value}</span>}
     </div>
-    <div className={`w-1.5 md:w-2 h-1.5 md:h-2 rounded-full ${active ? 'bg-jarvis-accent shadow-[0_0_10px_rgba(255,0,0,0.8)]' : 'bg-white/10'}`} />
+    <div className={`w-1.5 md:w-2 h-1.5 md:h-2 rounded-full ${active ? 'bg-jarvis-accent shadow-[0_0_10px_rgba(230,197,106,0.8)]' : 'bg-white/10'}`} />
   </div>
 );

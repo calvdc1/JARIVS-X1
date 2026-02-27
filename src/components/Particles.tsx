@@ -11,7 +11,9 @@ export const Particles: React.FC = () => {
     if (!ctx) return;
 
     let animationFrameId: number;
+    let lastFrame = 0;
     let particles: Particle[] = [];
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     class Particle {
       x: number;
@@ -42,7 +44,7 @@ export const Particles: React.FC = () => {
 
       draw() {
         if (!ctx) return;
-        ctx.fillStyle = `rgba(255, 42, 0, ${this.opacity})`;
+        ctx.fillStyle = `rgba(230, 197, 106, ${this.opacity})`;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
@@ -52,13 +54,20 @@ export const Particles: React.FC = () => {
     const init = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      const isMobile = window.innerWidth < 768;
+      const particleCount = prefersReducedMotion ? 24 : isMobile ? 40 : 80;
       particles = [];
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < particleCount; i++) {
         particles.push(new Particle());
       }
     };
 
-    const animate = () => {
+    const animate = (timestamp: number) => {
+      if (timestamp - lastFrame < 33) {
+        animationFrameId = requestAnimationFrame(animate);
+        return;
+      }
+      lastFrame = timestamp;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       particles.forEach(p => {
         p.update();
@@ -68,7 +77,7 @@ export const Particles: React.FC = () => {
     };
 
     init();
-    animate();
+    animationFrameId = requestAnimationFrame(animate);
 
     const handleResize = () => {
       init();
