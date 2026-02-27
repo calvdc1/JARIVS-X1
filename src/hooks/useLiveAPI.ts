@@ -64,18 +64,23 @@ export const useLiveAPI = () => {
     isSpeakingRef.current = isSpeaking;
   }, [isSpeaking]);
   
+  // Debounce state persistence to avoid infinite loops
   useEffect(() => {
-    if (isConnected) {
+    if (!isConnected) return;
+
+    const timer = setTimeout(() => {
       fetch('/api/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          currentView, 
+        body: JSON.stringify({
+          currentView,
           activePersonalityId,
           lastInteraction: new Date().toISOString()
         })
-      });
-    }
+      }).catch(err => console.error("Failed to persist state:", err));
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [currentView, activePersonalityId, isConnected]);
 
   const sessionRef = useRef<any>(null);
@@ -85,6 +90,8 @@ export const useLiveAPI = () => {
   const nextStartTimeRef = useRef<number>(0);
   const activeSourceNodesRef = useRef<AudioBufferSourceNode[]>([]);
   const lastChunkTimeRef = useRef<number>(0);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const isListeningRef = useRef<boolean>(true);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -686,6 +693,18 @@ export const useLiveAPI = () => {
         executeGlobalCommand(transcript);
       };
 
+      recognition.onerror = (event: any) => {
+        console.error("Speech Recognition Error:", event.error);
+        if (event.error === 'no-speech' || event.error === 'network') {
+          // Attempt to restart on transient errors
+          if (isBackgroundListening) {
+            setTimeout(() => {
+              try { recognition.start(); } catch (e) {}
+            }, 1000);
+          }
+        }
+      };
+
       recognition.onend = () => {
         if (isBackgroundListening) {
           try { recognition.start(); } catch (e) {}
@@ -700,18 +719,55 @@ export const useLiveAPI = () => {
     setIsBackgroundListening(active);
     if (recognitionRef.current) {
       if (active) {
-        try { recognitionRef.current.start(); } catch (e) {}
+        try {
+          recognitionRef.current.start();
+          console.log("Background listening started");
+        } catch (e) {
+          console.warn("Failed to start background listening:", e);
+        }
       } else {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+          console.log("Background listening stopped");
+        } catch (e) {
+          console.warn("Failed to stop background listening:", e);
+        }
       }
     }
   }, []);
 
-  // Initialize background listening on mount
+  // Don't automatically start background listening - let it be optional
   useEffect(() => {
-    toggleBackgroundListening(true);
-    return () => toggleBackgroundListening(false);
-  }, [toggleBackgroundListening]);
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+      }
+    };
+  }, []);
+
+  // Auto-enable listening when connected
+  useEffect(() => {
+    if (isConnected && !isListening) {
+      setIsListening(true);
+    }
+  }, [isConnected]);
+
+  // Sync isListening to ref so audio processor can check it
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
+
+  // Control audio processing based on isListening state
+  useEffect(() => {
+    if (!processorRef.current) return;
+
+    if (isListening && sessionRef.current && audioContextRef.current) {
+      // Resume audio capture
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume().catch(e => console.warn("Failed to resume audio context:", e));
+      }
+    }
+  }, [isListening]);
 
   const connect = useCallback(async () => {
     if (isConnected || isConnecting) return;
@@ -1164,6 +1220,7 @@ export const useLiveAPI = () => {
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = stream;
       } catch (err: any) {
         const errorMsg = err.name === 'NotAllowedError'
           ? "Microphone permission denied. Please allow microphone access in your browser settings."
@@ -1182,24 +1239,24 @@ export const useLiveAPI = () => {
       processorRef.current = audioContextRef.current.createScriptProcessor(2048, 1, 1);
 
       processorRef.current.onaudioprocess = (e) => {
-        if (!sessionRef.current) return;
+        if (!sessionRef.current || !isListeningRef.current) return;
         const session = sessionRef.current as any;
         const inputData = e.inputBuffer.getChannelData(0);
 
-        // Simple downsampling from 24000 to 16000 (ratio 1.5)
-        const downsampledLength = Math.floor(inputData.length * (16000 / 24000));
-        const downsampledData = new Int16Array(downsampledLength);
-        
-        for (let i = 0; i < downsampledLength; i++) {
-          const sampleIndex = Math.floor(i * 1.5);
-          const sample = inputData[sampleIndex];
-          downsampledData[i] = Math.max(-1, Math.min(1, sample)) * 0x7FFF;
+        // Convert float32 to int16
+        const int16Data = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          int16Data[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
         }
 
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(downsampledData.buffer)));
-        session.sendRealtimeInput({
-          media: { data: base64, mimeType: 'audio/pcm;rate=16000' }
-        });
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(int16Data.buffer)));
+        try {
+          session.sendRealtimeInput({
+            media: { data: base64, mimeType: 'audio/pcm;rate=24000' }
+          });
+        } catch (err) {
+          console.error("Failed to send audio:", err);
+        }
       };
 
       source.connect(processorRef.current);
@@ -1216,11 +1273,28 @@ export const useLiveAPI = () => {
       sessionRef.current.close();
       sessionRef.current = null;
     }
+    if (processorRef.current) {
+      try {
+        processorRef.current.disconnect();
+      } catch (e) {}
+      processorRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => {
+        try {
+          track.stop();
+        } catch (e) {}
+      });
+      mediaStreamRef.current = null;
+    }
     if (audioContextRef.current) {
-      audioContextRef.current.close();
+      try {
+        audioContextRef.current.close();
+      } catch (e) {}
       audioContextRef.current = null;
     }
     setIsConnected(false);
+    setIsListening(false);
     setAudioLevel(0);
     setAudioHealth({ bufferMs: 0, latencyMs: 0, stutterEvents: 0 });
   }, []);
@@ -1244,6 +1318,7 @@ export const useLiveAPI = () => {
     setCurrentView,
     isProcessing,
     isListening,
+    setIsListening,
     isBackgroundListening,
     toggleBackgroundListening,
     personalities,

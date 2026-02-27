@@ -364,12 +364,12 @@ export const JarvisUI: React.FC = () => {
             <div className="absolute inset-[-20px] rounded-full border border-jarvis-accent/10 border-dashed pointer-events-none" />
 
             {/* Main Rings */}
-            <motion.div 
-              animate={{ 
-                scale: isSpeaking ? [1, 1.05, 1] : isConnected ? [1, 1.02, 1] : 1
+            <motion.div
+              animate={{
+                scale: isSpeaking ? [1, 1.03, 1] : [1, 1.01, 1]
               }}
-              transition={{ 
-                scale: { duration: isSpeaking ? 0.5 : 3, repeat: Infinity, ease: "easeInOut" }
+              transition={{
+                scale: { duration: isSpeaking ? 0.6 : 4, repeat: Infinity, ease: "easeInOut" }
               }}
               className="w-48 h-48 md:w-64 md:h-64 rounded-full border-2 border-dashed border-jarvis-accent/20 flex items-center justify-center"
             >
@@ -441,18 +441,18 @@ export const JarvisUI: React.FC = () => {
                   
                   <div className="absolute inset-3 rounded-full border border-jarvis-accent/25 bg-black/80 flex items-center justify-center overflow-hidden">
                     <div className="flex items-end gap-1 h-16 md:h-20">
-                      {[...Array(24)].map((_, i) => {
-                        const base = 8 + ((i % 5) * 4);
-                        const peak = base + (audioLevel * 42) + ((i % 3) * 7);
+                      {[...Array(16)].map((_, i) => {
+                        const base = 6 + ((i % 4) * 3);
+                        const peak = base + (Math.max(audioLevel, 0.1) * 24) + ((i % 2) * 4);
                         return (
                           <motion.div
                             key={`wave-${i}`}
                             animate={{
-                              height: isSpeaking ? [base, peak, base + 4] : [6, 10, 6],
-                              opacity: isSpeaking ? [0.45, 1, 0.45] : [0.2, 0.45, 0.2]
+                              height: isSpeaking ? peak : base
                             }}
-                            transition={{ duration: 0.32, repeat: Infinity, ease: 'easeInOut', delay: i * 0.02 }}
-                            className="w-1 rounded-full bg-jarvis-accent shadow-[0_0_10px_rgba(230,197,106,0.8)]"
+                            transition={{ duration: 0.15, ease: 'linear' }}
+                            style={{ willChange: 'height' }}
+                            className="w-1.5 rounded-full bg-jarvis-accent shadow-[0_0_8px_rgba(230,197,106,0.6)]"
                           />
                         );
                       })}
@@ -469,21 +469,23 @@ export const JarvisUI: React.FC = () => {
                   )}
 
                   {/* Mouth Waveform Overlay */}
-                  <AnimatePresence>
+                  <AnimatePresence mode="wait">
                     {isSpeaking && (
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.5 }}
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.15 }}
                         className="absolute inset-0 flex items-center justify-center pointer-events-none z-30"
                       >
-                        <div className="flex items-center gap-1 h-10">
-                          {[...Array(12)].map((_, i) => (
+                        <div className="flex items-center gap-1 h-8">
+                          {[...Array(8)].map((_, i) => (
                             <motion.div
                               key={`mouth-${i}`}
-                              animate={{ height: [6, 28, 10, 36, 6][i % 5], opacity: [0.4, 1, 0.4] }}
-                              transition={{ duration: 0.35, repeat: Infinity, ease: "easeInOut", delay: i * 0.04 }}
-                              className="w-1.5 bg-jarvis-accent rounded-full shadow-[0_0_10px_rgba(230,197,106,0.8)]"
+                              animate={{ height: [8, 24, 12][i % 3] }}
+                              transition={{ duration: 0.2, ease: "linear" }}
+                              style={{ willChange: 'height' }}
+                              className="w-1 bg-jarvis-accent rounded-full shadow-[0_0_8px_rgba(230,197,106,0.6)]"
                             />
                           ))}
                         </div>
@@ -640,14 +642,21 @@ export const JarvisUI: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4 pt-4">
-            <button 
-              onClick={() => setIsListening(!isListening)}
+            <button
+              onClick={() => {
+                if (isListening) {
+                  setIsListening(false);
+                } else {
+                  setIsListening(true);
+                }
+              }}
+              disabled={!isConnected}
               className={`p-3 rounded-full border transition-all ${
-                isListening 
-                  ? 'bg-jarvis-accent/20 border-jarvis-accent text-jarvis-accent shadow-[0_0_15px_rgba(230,197,106,0.4)]' 
+                isListening
+                  ? 'bg-jarvis-accent/20 border-jarvis-accent text-jarvis-accent shadow-[0_0_15px_rgba(230,197,106,0.4)]'
                   : 'bg-white/5 border-white/10 text-white/40'
-              }`}
-              title={isListening ? "Mute Microphone" : "Unmute Microphone"}
+              } ${!isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={isConnected ? (isListening ? "Mute Microphone" : "Unmute Microphone") : "Connect first"}
             >
               {isListening ? <Mic size={20} /> : <MicOff size={20} />}
             </button>
