@@ -91,6 +91,7 @@ export const useLiveAPI = () => {
   const activeSourceNodesRef = useRef<AudioBufferSourceNode[]>([]);
   const lastChunkTimeRef = useRef<number>(0);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const isListeningRef = useRef<boolean>(true);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -744,6 +745,30 @@ export const useLiveAPI = () => {
     };
   }, []);
 
+  // Auto-enable listening when connected
+  useEffect(() => {
+    if (isConnected && !isListening) {
+      setIsListening(true);
+    }
+  }, [isConnected]);
+
+  // Sync isListening to ref so audio processor can check it
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
+
+  // Control audio processing based on isListening state
+  useEffect(() => {
+    if (!processorRef.current) return;
+
+    if (isListening && sessionRef.current && audioContextRef.current) {
+      // Resume audio capture
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume().catch(e => console.warn("Failed to resume audio context:", e));
+      }
+    }
+  }, [isListening]);
+
   const connect = useCallback(async () => {
     if (isConnected || isConnecting) return;
     setIsConnecting(true);
@@ -1214,24 +1239,24 @@ export const useLiveAPI = () => {
       processorRef.current = audioContextRef.current.createScriptProcessor(2048, 1, 1);
 
       processorRef.current.onaudioprocess = (e) => {
-        if (!sessionRef.current) return;
+        if (!sessionRef.current || !isListeningRef.current) return;
         const session = sessionRef.current as any;
         const inputData = e.inputBuffer.getChannelData(0);
 
-        // Simple downsampling from 24000 to 16000 (ratio 1.5)
-        const downsampledLength = Math.floor(inputData.length * (16000 / 24000));
-        const downsampledData = new Int16Array(downsampledLength);
-        
-        for (let i = 0; i < downsampledLength; i++) {
-          const sampleIndex = Math.floor(i * 1.5);
-          const sample = inputData[sampleIndex];
-          downsampledData[i] = Math.max(-1, Math.min(1, sample)) * 0x7FFF;
+        // Convert float32 to int16
+        const int16Data = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          int16Data[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
         }
 
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(downsampledData.buffer)));
-        session.sendRealtimeInput({
-          media: { data: base64, mimeType: 'audio/pcm;rate=16000' }
-        });
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(int16Data.buffer)));
+        try {
+          session.sendRealtimeInput({
+            media: { data: base64, mimeType: 'audio/pcm;rate=24000' }
+          });
+        } catch (err) {
+          console.error("Failed to send audio:", err);
+        }
       };
 
       source.connect(processorRef.current);
@@ -1248,21 +1273,28 @@ export const useLiveAPI = () => {
       sessionRef.current.close();
       sessionRef.current = null;
     }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
+    if (processorRef.current) {
+      try {
+        processorRef.current.disconnect();
+      } catch (e) {}
+      processorRef.current = null;
     }
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => {
-        track.stop();
+        try {
+          track.stop();
+        } catch (e) {}
       });
       mediaStreamRef.current = null;
     }
-    if (processorRef.current) {
-      processorRef.current.disconnect();
-      processorRef.current = null;
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch (e) {}
+      audioContextRef.current = null;
     }
     setIsConnected(false);
+    setIsListening(false);
     setAudioLevel(0);
     setAudioHealth({ bufferMs: 0, latencyMs: 0, stutterEvents: 0 });
   }, []);
