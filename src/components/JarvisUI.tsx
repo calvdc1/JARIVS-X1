@@ -141,63 +141,64 @@ export const JarvisUI: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-[100dvh] bg-jarvis-dark flex flex-col items-center justify-center pt-[9.5rem] md:pt-32 p-3 md:p-6 relative overflow-hidden">
+    <div className="w-full min-h-[100dvh] bg-jarvis-dark flex flex-col items-center justify-center pt-4 md:pt-6 p-3 md:p-6 relative overflow-hidden">
       <Particles />
       
       <WorkspaceHUD mode={workspaceMode} isProcessing={isProcessing} />
 
-      <div className="fixed top-3 md:top-4 left-3 right-3 md:left-6 md:right-6 z-40 glass-panel border-white/10 px-3 py-2 md:px-4 md:py-3">
-        <div className="flex flex-col gap-2 md:gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
-            <div className="flex items-center gap-2 md:gap-3 min-w-0">
-              {currentView !== 'main' && (
-                <button
-                  onClick={() => setCurrentView('main')}
-                  className="p-2 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:text-jarvis-accent hover:border-jarvis-accent/40 transition-all flex items-center gap-1"
-                >
-                  <ArrowLeft size={14} />
-                  <span className="text-[9px] font-display uppercase tracking-widest">Back</span>
-                </button>
-              )}
-              <div className="min-w-0">
-                <p className="text-[8px] md:text-[10px] font-mono text-white/40 uppercase tracking-widest truncate">{greeting}, {userProfile.name}</p>
-                <p className="text-xs md:text-sm font-display text-jarvis-accent">{phTime}</p>
-              </div>
+      <div className="fixed top-3 right-3 md:top-6 md:right-6 z-40 w-[210px] md:w-[250px] glass-panel border-white/10 px-3 py-3 md:px-4 md:py-4">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[8px] md:text-[9px] font-mono text-white/40 uppercase tracking-widest truncate">{greeting}, {userProfile.name}</p>
+              <p className="text-[10px] md:text-xs font-display text-jarvis-accent">{phTime}</p>
             </div>
-
-            <div className="text-center md:text-right">
-              <p className="text-[10px] md:text-xs font-display tracking-[0.25em] text-jarvis-accent uppercase">Jarvis ONEMSU</p>
-              <p className="text-[8px] md:text-[10px] font-mono text-white/35 uppercase tracking-widest">Neural Interface Active</p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="glass-panel px-2.5 py-1.5 border-white/5">
-                <span className="text-[9px] font-display text-amber-300 uppercase">Lvl {userProfile.level} · {userProfile.xp} XP</span>
-              </div>
-              <div className="glass-panel px-2.5 py-1.5 border-white/5">
-                <span className="text-[9px] font-display text-emerald-300 uppercase">Streak {userProfile.streak}D</span>
-              </div>
-              <div className="w-8 h-8 rounded-full border border-jarvis-accent/30 flex items-center justify-center bg-jarvis-accent/5">
-                <Activity size={14} className="text-jarvis-accent animate-pulse" />
-              </div>
+            <div className="w-7 h-7 rounded-full border border-jarvis-accent/30 flex items-center justify-center bg-jarvis-accent/5 shrink-0">
+              <Activity size={13} className="text-jarvis-accent animate-pulse" />
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 text-jarvis-accent">
-              <Download size={13} />
-              <span className="text-[9px] md:text-[10px] font-display uppercase tracking-widest text-white/70">Download Builds</span>
+          <div className="border-t border-white/10 pt-2">
+            <p className="text-[9px] md:text-[10px] font-display tracking-[0.18em] text-jarvis-accent uppercase">Jarvis ONEMSU</p>
+            <p className="text-[8px] font-mono text-white/35 uppercase tracking-widest">Neural Interface</p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-1.5">
+            <div className="glass-panel px-2 py-1 border-white/5">
+              <span className="text-[9px] font-display text-amber-300 uppercase">Lvl {userProfile.level} · {userProfile.xp} XP</span>
             </div>
-            {downloadTargets.map((target) => (
-              <a
-                key={target.label}
-                href={target.href}
-                download
-                className="text-[10px] md:text-xs px-2.5 py-1.5 rounded-md border border-jarvis-accent/30 bg-jarvis-accent/10 text-jarvis-accent hover:bg-jarvis-accent/20 transition-colors"
-              >
-                {target.label}
-              </a>
-            ))}
+            <div className="glass-panel px-2 py-1 border-white/5">
+              <span className="text-[9px] font-display text-emerald-300 uppercase">Streak {userProfile.streak}D</span>
+            </div>
+          </div>
+
+          {currentView !== 'main' && (
+            <button
+              onClick={() => setCurrentView('main')}
+              className="w-full p-2 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:text-jarvis-accent hover:border-jarvis-accent/40 transition-all flex items-center justify-center gap-1"
+            >
+              <ArrowLeft size={13} />
+              <span className="text-[9px] font-display uppercase tracking-widest">Back to Main</span>
+            </button>
+          )}
+
+          <div className="border-t border-white/10 pt-2">
+            <div className="flex items-center gap-1.5 text-jarvis-accent mb-1.5">
+              <Download size={12} />
+              <span className="text-[8px] md:text-[9px] font-display uppercase tracking-widest text-white/70">Download Builds</span>
+            </div>
+            <div className="grid grid-cols-1 gap-1">
+              {downloadTargets.map((target) => (
+                <a
+                  key={target.label}
+                  href={target.href}
+                  download
+                  className="text-[10px] px-2 py-1 rounded-md border border-jarvis-accent/30 bg-jarvis-accent/10 text-jarvis-accent hover:bg-jarvis-accent/20 transition-colors"
+                >
+                  {target.label}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </div>
