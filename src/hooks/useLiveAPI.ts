@@ -64,18 +64,23 @@ export const useLiveAPI = () => {
     isSpeakingRef.current = isSpeaking;
   }, [isSpeaking]);
   
+  // Debounce state persistence to avoid infinite loops
   useEffect(() => {
-    if (isConnected) {
+    if (!isConnected) return;
+
+    const timer = setTimeout(() => {
       fetch('/api/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          currentView, 
+        body: JSON.stringify({
+          currentView,
           activePersonalityId,
           lastInteraction: new Date().toISOString()
         })
-      });
-    }
+      }).catch(err => console.error("Failed to persist state:", err));
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [currentView, activePersonalityId, isConnected]);
 
   const sessionRef = useRef<any>(null);
@@ -85,6 +90,7 @@ export const useLiveAPI = () => {
   const nextStartTimeRef = useRef<number>(0);
   const activeSourceNodesRef = useRef<AudioBufferSourceNode[]>([]);
   const lastChunkTimeRef = useRef<number>(0);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -686,6 +692,18 @@ export const useLiveAPI = () => {
         executeGlobalCommand(transcript);
       };
 
+      recognition.onerror = (event: any) => {
+        console.error("Speech Recognition Error:", event.error);
+        if (event.error === 'no-speech' || event.error === 'network') {
+          // Attempt to restart on transient errors
+          if (isBackgroundListening) {
+            setTimeout(() => {
+              try { recognition.start(); } catch (e) {}
+            }, 1000);
+          }
+        }
+      };
+
       recognition.onend = () => {
         if (isBackgroundListening) {
           try { recognition.start(); } catch (e) {}
@@ -700,18 +718,31 @@ export const useLiveAPI = () => {
     setIsBackgroundListening(active);
     if (recognitionRef.current) {
       if (active) {
-        try { recognitionRef.current.start(); } catch (e) {}
+        try {
+          recognitionRef.current.start();
+          console.log("Background listening started");
+        } catch (e) {
+          console.warn("Failed to start background listening:", e);
+        }
       } else {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+          console.log("Background listening stopped");
+        } catch (e) {
+          console.warn("Failed to stop background listening:", e);
+        }
       }
     }
   }, []);
 
-  // Initialize background listening on mount
+  // Don't automatically start background listening - let it be optional
   useEffect(() => {
-    toggleBackgroundListening(true);
-    return () => toggleBackgroundListening(false);
-  }, [toggleBackgroundListening]);
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+      }
+    };
+  }, []);
 
   const connect = useCallback(async () => {
     if (isConnected || isConnecting) return;
@@ -1164,6 +1195,7 @@ export const useLiveAPI = () => {
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = stream;
       } catch (err: any) {
         const errorMsg = err.name === 'NotAllowedError'
           ? "Microphone permission denied. Please allow microphone access in your browser settings."
@@ -1220,6 +1252,16 @@ export const useLiveAPI = () => {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => {
+        track.stop();
+      });
+      mediaStreamRef.current = null;
+    }
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
+    }
     setIsConnected(false);
     setAudioLevel(0);
     setAudioHealth({ bufferMs: 0, latencyMs: 0, stutterEvents: 0 });
@@ -1244,6 +1286,7 @@ export const useLiveAPI = () => {
     setCurrentView,
     isProcessing,
     isListening,
+    setIsListening,
     isBackgroundListening,
     toggleBackgroundListening,
     personalities,
