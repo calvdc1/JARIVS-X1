@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, User, Bot, Terminal, Maximize2, Minimize2, ImagePlus } from 'lucide-react';
+import { Send, User, Bot, Terminal, Maximize2, Minimize2, Copy, Check, Trash2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface Message {
@@ -11,15 +11,15 @@ interface Message {
 interface ChatSystemProps {
   messages: Message[];
   onSendMessage: (text: string) => void;
-  onAttachImage?: (file: File, prompt: string) => void;
+  onClearChat?: () => void;
   isProcessing: boolean;
 }
 
-export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage, onAttachImage, isProcessing }) => {
+export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage, onClearChat, isProcessing }) => {
   const [input, setInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -35,34 +35,42 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
     }
   };
 
-  const handleAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !onAttachImage || isProcessing) return;
-    const prompt = input.trim() || 'Analyze this image in detail and give actionable insights.';
-    onAttachImage(file, prompt);
-    setInput('');
-    e.target.value = '';
+  const handleCopy = (text: string, index: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
   };
 
   return (
-    <motion.div
+    <motion.div 
       layout
       className={`glass-panel flex flex-col overflow-hidden transition-all duration-500 ${isExpanded ? 'fixed inset-4 z-50' : 'w-full h-full'}`}
     >
-      <div className="p-3 border-b border-jarvis-blue/20 flex items-center justify-between bg-jarvis-blue/5">
+      {/* Header */}
+      <div className="p-3 border-b border-jarvis-gold/20 flex items-center justify-between bg-jarvis-gold/5">
         <div className="flex items-center gap-2">
-          <Terminal size={14} className="text-jarvis-blue" />
-          <span className="text-[10px] font-display uppercase tracking-widest text-jarvis-blue">Neural Link Console</span>
+          <Terminal size={14} className="text-jarvis-gold" />
+          <span className="text-[10px] font-display uppercase tracking-widest text-jarvis-gold">Neural Link Console</span>
         </div>
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-jarvis-blue"
-        >
-          {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={onClearChat}
+            className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-red-400"
+            title="Clear Chat"
+          >
+            <Trash2 size={14} />
+          </button>
+          <button 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-jarvis-gold"
+          >
+            {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          </button>
+        </div>
       </div>
 
-      <div
+      {/* Messages */}
+      <div 
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
       >
@@ -75,24 +83,31 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div className={`max-w-[85%] flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${msg.role === 'user' ? 'border-jarvis-blue/30 bg-jarvis-blue/10' : 'border-white/10 bg-white/5'}`}>
-                  {msg.role === 'user' ? <User size={14} className="text-jarvis-blue" /> : <Bot size={14} className="text-white/60" />}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${msg.role === 'user' ? 'border-jarvis-gold/30 bg-jarvis-gold/10' : 'border-white/10 bg-white/5'}`}>
+                  {msg.role === 'user' ? <User size={14} className="text-jarvis-gold" /> : <Bot size={14} className="text-white/60" />}
                 </div>
-                <div className={`p-3 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-jarvis-blue/10 border border-jarvis-blue/20 text-white'
+                <div className={`p-3 rounded-2xl text-sm leading-relaxed relative group ${
+                  msg.role === 'user' 
+                    ? 'bg-jarvis-gold/10 border border-jarvis-gold/20 text-white' 
                     : 'bg-white/5 border border-white/10 text-white/80'
                 }`}>
                   <div className="markdown-body prose prose-invert prose-sm max-w-none">
                     <ReactMarkdown>{msg.text}</ReactMarkdown>
                   </div>
+                  
+                  <button 
+                    onClick={() => handleCopy(msg.text, i)}
+                    className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/40 text-white/40 opacity-0 group-hover:opacity-100 transition-all hover:text-white"
+                  >
+                    {copiedIndex === i ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                  </button>
                 </div>
               </div>
             </motion.div>
           ))}
         </AnimatePresence>
         {isProcessing && (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="flex justify-start"
@@ -107,7 +122,7 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
                     key={i}
                     animate={{ opacity: [0.2, 1, 0.2] }}
                     transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                    className="w-1.5 h-1.5 rounded-full bg-jarvis-blue"
+                    className="w-1.5 h-1.5 rounded-full bg-jarvis-gold"
                   />
                 ))}
               </div>
@@ -116,34 +131,20 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t border-jarvis-blue/20 bg-black/20">
-        <div className="relative flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => imageInputRef.current?.click()}
-            className="p-2 border border-white/10 rounded-lg text-jarvis-blue hover:bg-jarvis-blue/10 transition-colors"
-            title="Attach photo"
-          >
-            <ImagePlus size={18} />
-          </button>
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleAttach}
-          />
+      {/* Input */}
+      <form onSubmit={handleSubmit} className="p-4 border-t border-jarvis-gold/20 bg-black/20">
+        <div className="relative flex items-center">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask anything, build AI workflows, generate images/videos..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm focus:outline-none focus:border-jarvis-blue/50 transition-colors placeholder:text-white/20"
+            placeholder="Type a command or question..."
+            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm focus:outline-none focus:border-jarvis-gold/50 transition-colors placeholder:text-white/20"
           />
-          <button
+          <button 
             type="submit"
             disabled={isProcessing || !input.trim()}
-            className="absolute right-2 p-2 text-jarvis-blue hover:bg-jarvis-blue/10 rounded-lg transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+            className="absolute right-2 p-2 text-jarvis-gold hover:bg-jarvis-gold/10 rounded-lg transition-all disabled:opacity-30 disabled:hover:bg-transparent"
           >
             <Send size={18} />
           </button>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mic, MicOff, Power, Shield, Activity, Cpu, Terminal, Music, Image as ImageIcon, X, Youtube, Dog, Database, Upload, MessageSquare, Command as CommandIcon, ArrowLeft, Download } from 'lucide-react';
+import { Mic, MicOff, Power, Shield, Activity, Cpu, Terminal, Music, Image as ImageIcon, X, Youtube, Dog, Database, Upload, MessageSquare, Command as CommandIcon, ArrowLeft } from 'lucide-react';
 import { useLiveAPI } from '../hooks/useLiveAPI';
 import YouTube from 'react-youtube';
 import { WorkshopDashboard } from './WorkshopDashboard';
@@ -15,6 +15,7 @@ import { LearningCompanion } from './LearningCompanion';
 import { AITeam } from './AITeam';
 import { DecisionSimulator } from './DecisionSimulator';
 import { KnowledgeGraph } from './KnowledgeGraph';
+import { AIBuilder } from './AIBuilder';
 import { PromptAutopsy } from './PromptAutopsy';
 import { MentalModelLibrary } from './MentalModelLibrary';
 import { RunningTracker } from './RunningTracker';
@@ -27,8 +28,6 @@ export const JarvisUI: React.FC = () => {
     connect, 
     disconnect, 
     isSpeaking, 
-    audioLevel,
-    audioHealth,
     isSpotifyConnected, 
     presentedImage, 
     setPresentedImage,
@@ -46,9 +45,9 @@ export const JarvisUI: React.FC = () => {
     activePersonalityId,
     handleSwitchPersonality,
     messages,
+    clearMessages,
     spotifyTrack,
     sendTextContext,
-    sendMultimodalContext,
     transferPlayback,
     userProfile,
     automations,
@@ -59,6 +58,8 @@ export const JarvisUI: React.FC = () => {
     graphData,
     runs,
     foodLogs,
+    voiceGender,
+    setVoiceGender,
     handleSaveAutomation,
     handleSaveGoal,
     handleUpdateLearning,
@@ -70,13 +71,9 @@ export const JarvisUI: React.FC = () => {
   const [phTime, setPhTime] = useState(new Date().toLocaleTimeString('en-PH', { hour12: true, timeZone: 'Asia/Manila' }));
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [greeting, setGreeting] = useState('');
-  const [osModule, setOsModule] = useState<'memory' | 'automation' | 'goals' | 'learning' | 'team' | 'decisions' | 'graph' | 'autopsy' | 'models' | 'running' | 'food'>('memory');
-
-  const downloadTargets = [
-    { label: 'Android APK', href: '/downloads/jarvis-android.apk' },
-    { label: 'iOS XAPK', href: '/downloads/jarvis-ios.xapk' },
-    { label: 'PC EXE', href: '/downloads/jarvis-windows.exe' },
-  ];
+  const [osModule, setOsModule] = useState<'memory' | 'automation' | 'goals' | 'learning' | 'team' | 'decisions' | 'graph' | 'autopsy' | 'models' | 'running' | 'food' | 'builder'>('memory');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const updateGreeting = () => {
@@ -134,18 +131,6 @@ export const JarvisUI: React.FC = () => {
     reader.readAsText(file);
   };
 
-  const handleChatImageUpload = (file: File, prompt: string) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64Data = result.split(',')[1];
-      if (!base64Data) return;
-      sendMultimodalContext(prompt, base64Data, file.type || 'image/png');
-      setLogs(prev => [`[SYSTEM] Image attached: ${file.name}`, ...prev]);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleCommand = (cmd: string) => {
     if (cmd === 'main-view') setCurrentView('main');
     else if (cmd === 'workshop-view') setCurrentView('workshop');
@@ -155,72 +140,206 @@ export const JarvisUI: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-[100dvh] bg-jarvis-dark flex flex-col items-center justify-center pt-4 md:pt-6 p-3 md:p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-jarvis-dark flex flex-col items-center justify-center p-4 md:p-6 relative overflow-hidden">
       <Particles />
       
       <WorkspaceHUD mode={workspaceMode} isProcessing={isProcessing} />
 
-      <div className="fixed top-3 right-3 md:top-6 md:right-6 z-40 w-[210px] md:w-[250px] glass-panel border-white/10 px-3 py-3 md:px-4 md:py-4">
-        <div className="flex flex-col gap-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-[8px] md:text-[9px] font-mono text-white/40 uppercase tracking-widest truncate">{greeting}, {userProfile.name}</p>
-              <p className="text-[10px] md:text-xs font-display text-jarvis-accent">{phTime}</p>
-            </div>
-            <div className="w-7 h-7 rounded-full border border-jarvis-accent/30 flex items-center justify-center bg-jarvis-accent/5 shrink-0">
-              <Activity size={13} className="text-jarvis-accent animate-pulse" />
-            </div>
-          </div>
+      {/* Sidebar Toggle Button */}
+      <button 
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="fixed top-6 left-6 z-50 p-2 rounded-lg glass-panel border-white/10 text-jarvis-gold hover:bg-jarvis-gold/10 transition-all"
+      >
+        <div className="flex flex-col gap-1 w-5">
+          <motion.div animate={{ width: isSidebarOpen ? 20 : 12 }} className="h-0.5 bg-current rounded-full" />
+          <motion.div animate={{ width: 20 }} className="h-0.5 bg-current rounded-full" />
+          <motion.div animate={{ width: isSidebarOpen ? 12 : 20 }} className="h-0.5 bg-current rounded-full" />
+        </div>
+      </button>
 
-          <div className="border-t border-white/10 pt-2 space-y-1">
-            <p className="text-[9px] md:text-[10px] font-display tracking-[0.18em] text-jarvis-accent uppercase">Jarvis ONEMSU</p>
-            <p className="text-[8px] font-mono text-white/35 uppercase tracking-widest">Neural Interface</p>
-            <p className="text-[8px] font-mono text-white/55">AI Builder • Advanced Q&A • Image/Video Prompting</p>
-          </div>
+      {/* Left Sidebar Header */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div 
+            initial={{ x: -300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -300, opacity: 0 }}
+            className="fixed top-0 left-0 bottom-0 w-72 z-40 flex flex-col p-6 pt-20 bg-black/40 backdrop-blur-xl border-r border-white/5"
+          >
+            <div className="flex-1 flex flex-col gap-6 overflow-y-auto scrollbar-hide">
+              {/* User Profile Section */}
+              <div className="glass-panel p-4 flex flex-col gap-4 border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full border-2 border-jarvis-gold/30 p-0.5 bg-jarvis-gold/5">
+                    <div className="w-full h-full rounded-full overflow-hidden">
+                      <img src={userProfile.avatar} alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-mono text-white/40 uppercase tracking-widest">Authorized User</span>
+                    <span className="text-xs font-display text-white uppercase tracking-wider">{userProfile.name}</span>
+                  </div>
+                </div>
 
-          <div className="grid grid-cols-1 gap-1.5">
-            <div className="glass-panel px-2 py-1 border-white/5">
-              <span className="text-[9px] font-display text-amber-300 uppercase">Lvl {userProfile.level} · {userProfile.xp} XP</span>
-            </div>
-            <div className="glass-panel px-2 py-1 border-white/5">
-              <span className="text-[9px] font-display text-emerald-300 uppercase">Streak {userProfile.streak}D</span>
-            </div>
-            <div className="glass-panel px-2 py-1 border-white/5">
-              <span className="text-[8px] font-mono text-white/70 uppercase">Buffer {Math.round(audioHealth.bufferMs)}ms · Delay {Math.round(audioHealth.latencyMs)}ms · Stutter {audioHealth.stutterEvents}</span>
-            </div>
-          </div>
+                <div className="h-px bg-white/5 w-full" />
 
-          {currentView !== 'main' && (
-            <button
-              onClick={() => setCurrentView('main')}
-              className="w-full p-2 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:text-jarvis-accent hover:border-jarvis-accent/40 transition-all flex items-center justify-center gap-1"
-            >
-              <ArrowLeft size={13} />
-              <span className="text-[9px] font-display uppercase tracking-widest">Back to Main</span>
-            </button>
-          )}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="text-[6px] font-mono text-white/20 uppercase leading-none">System Time</span>
+                      <span className="text-[10px] font-display text-jarvis-gold">{phTime}</span>
+                    </div>
+                    <div className="w-6 h-6 rounded-full border border-jarvis-gold/20 flex items-center justify-center bg-jarvis-gold/5">
+                      <Activity size={10} className="text-jarvis-gold animate-pulse" />
+                    </div>
+                  </div>
 
-          <div className="border-t border-white/10 pt-2">
-            <div className="flex items-center gap-1.5 text-jarvis-accent mb-1.5">
-              <Download size={12} />
-              <span className="text-[8px] md:text-[9px] font-display uppercase tracking-widest text-white/70">Download Builds</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="glass-panel px-2 py-1.5 flex flex-col border-white/5">
+                      <span className="text-[6px] font-mono text-white/20 uppercase leading-none">Level {userProfile.level}</span>
+                      <span className="text-[8px] font-display text-amber-400 uppercase">{userProfile.xp} XP</span>
+                    </div>
+                    <div className="glass-panel px-2 py-1.5 flex flex-col border-white/5">
+                      <span className="text-[6px] font-mono text-white/20 uppercase leading-none">Streak</span>
+                      <span className="text-[8px] font-display text-emerald-400 uppercase">{userProfile.streak} Days</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* System Controls */}
+              <div className="flex flex-col gap-2">
+                <span className="text-[8px] font-mono text-white/20 uppercase tracking-[0.2em] mb-1 ml-2">System Controls</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <SidebarButton 
+                    icon={isListening ? Mic : MicOff} 
+                    label={isListening ? "Mute" : "Unmute"} 
+                    active={isListening} 
+                    onClick={() => setIsListening(!isListening)} 
+                  />
+                  <SidebarButton 
+                    icon={MessageSquare} 
+                    label="Chat" 
+                    active={currentView === 'chat'} 
+                    onClick={() => setCurrentView('chat')} 
+                  />
+                  <SidebarButton 
+                    icon={Activity} 
+                    label="Sync" 
+                    active={false} 
+                    onClick={() => { disconnect(); setTimeout(connect, 500); }} 
+                  />
+                  <SidebarButton 
+                    icon={CommandIcon} 
+                    label="Commands" 
+                    active={isCommandPaletteOpen} 
+                    onClick={() => setIsCommandPaletteOpen(true)} 
+                  />
+                </div>
+              </div>
+
+              {/* Navigation */}
+              <div className="flex flex-col gap-2">
+                <span className="text-[8px] font-mono text-white/20 uppercase tracking-[0.2em] mb-1 ml-2">Neural Modules</span>
+                <SidebarButton 
+                  icon={Terminal} 
+                  label="Neural Builder" 
+                  active={osModule === 'builder' && currentView === 'workshop'} 
+                  onClick={() => { setCurrentView('workshop'); setOsModule('builder'); }} 
+                />
+                <SidebarButton 
+                  icon={Database} 
+                  label="Visual Memory" 
+                  active={osModule === 'memory' && currentView === 'workshop'} 
+                  onClick={() => { setCurrentView('workshop'); setOsModule('memory'); }} 
+                />
+                <SidebarButton 
+                  icon={Activity} 
+                  label="Knowledge Graph" 
+                  active={osModule === 'graph' && currentView === 'workshop'} 
+                  onClick={() => { setCurrentView('workshop'); setOsModule('graph'); }} 
+                />
+              </div>
+
+              {/* Status Indicators */}
+              <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between px-2">
+                <StatusIndicator label="Listen" active={isListening && !isSpeaking && !isProcessing} />
+                <StatusIndicator label="Process" active={isProcessing} />
+                <StatusIndicator label="Speak" active={isSpeaking} />
+              </div>
             </div>
-            <div className="grid grid-cols-1 gap-1">
-              {downloadTargets.map((target) => (
-                <a
-                  key={target.label}
-                  href={target.href}
-                  download
-                  className="text-[10px] px-2 py-1 rounded-md border border-jarvis-accent/30 bg-jarvis-accent/10 text-jarvis-accent hover:bg-jarvis-accent/20 transition-colors"
-                >
-                  {target.label}
-                </a>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Top Header - Just Logo/Speaking UI */}
+      <div className="fixed top-0 left-0 right-0 h-20 z-30 flex items-center justify-center pointer-events-none">
+        <motion.div 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="flex flex-col items-center pointer-events-auto cursor-pointer group"
+          onClick={() => setCurrentView('main')}
+        >
+          <div className="flex items-center gap-4">
+            {/* Small Speaking UI in Header */}
+            <div className="flex items-center gap-1 h-4">
+              {[...Array(5)].map((_, i) => (
+                <motion.div
+                  key={`header-wave-${i}`}
+                  animate={{ 
+                    height: isSpeaking ? [4, 16, 8, 12, 4][i % 5] : [4, 6, 4],
+                    opacity: isSpeaking ? [0.4, 1, 0.4] : 0.2
+                  }}
+                  transition={{ duration: 0.4, repeat: Infinity, delay: i * 0.1 }}
+                  className="w-0.5 bg-jarvis-gold rounded-full"
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-jarvis-gold/10 border border-jarvis-gold/20 flex items-center justify-center group-hover:bg-jarvis-gold/20 transition-colors">
+                <Cpu className="text-jarvis-gold" size={16} />
+              </div>
+              <h1 className="font-display text-xl tracking-[0.3em] text-white uppercase">
+                JARVIS <span className="text-jarvis-gold">X3</span>
+              </h1>
+            </div>
+
+            {/* Small Speaking UI in Header (Right) */}
+            <div className="flex items-center gap-1 h-4">
+              {[...Array(5)].map((_, i) => (
+                <motion.div
+                  key={`header-wave-r-${i}`}
+                  animate={{ 
+                    height: isSpeaking ? [4, 12, 16, 8, 4][i % 5] : [4, 6, 4],
+                    opacity: isSpeaking ? [0.4, 1, 0.4] : 0.2
+                  }}
+                  transition={{ duration: 0.4, repeat: Infinity, delay: i * 0.1 }}
+                  className="w-0.5 bg-jarvis-gold rounded-full"
+                />
               ))}
             </div>
           </div>
-        </div>
+          <div className="h-0.5 w-0 group-hover:w-full bg-jarvis-gold/50 transition-all duration-500 mt-1" />
+        </motion.div>
       </div>
 
+      {/* Back Button */}
+      <AnimatePresence>
+        {currentView !== 'main' && (
+          <motion.button
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            onClick={() => setCurrentView('main')}
+            className="fixed top-24 md:top-32 left-4 md:left-6 z-40 p-2 md:p-3 rounded-xl glass-panel border-white/10 text-white/40 hover:text-jarvis-gold hover:border-jarvis-gold/30 transition-all flex items-center gap-2 group"
+          >
+            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+            <span className="text-[8px] md:text-[10px] font-display uppercase tracking-widest">Back</span>
+          </motion.button>
+        )}
+      </AnimatePresence>
+      
       <CommandPalette 
         isOpen={isCommandPaletteOpen} 
         onClose={() => setIsCommandPaletteOpen(false)} 
@@ -229,10 +348,10 @@ export const JarvisUI: React.FC = () => {
 
       {/* Background Grid */}
       <div className="absolute inset-0 opacity-10 pointer-events-none" 
-           style={{ backgroundImage: 'radial-gradient(var(--color-jarvis-accent) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+           style={{ backgroundImage: 'radial-gradient(var(--color-jarvis-gold) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
       
       {/* Ambient Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-jarvis-accent/5 blur-[80px] md:blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-jarvis-gold/5 blur-[80px] md:blur-[120px] rounded-full pointer-events-none" />
 
       {/* Holographic Projector Overlay */}
       <AnimatePresence>
@@ -258,7 +377,7 @@ export const JarvisUI: React.FC = () => {
                 y: { duration: 0.5 },
                 opacity: { duration: 0.3 }
               }}
-              className="relative max-w-5xl w-full aspect-video glass-panel overflow-hidden border-2 border-jarvis-accent/50 shadow-[0_0_100px_rgba(230,197,106,0.3)] perspective-1000"
+              className="relative max-w-5xl w-full aspect-video glass-panel overflow-hidden border-2 border-jarvis-gold/50 shadow-[0_0_100px_rgba(255,215,0,0.3)] perspective-1000"
               style={{ transformStyle: 'preserve-3d' }}
             >
               <motion.img 
@@ -275,10 +394,10 @@ export const JarvisUI: React.FC = () => {
               
               {/* Holographic Grid Overlay */}
               <div className="absolute inset-0 pointer-events-none opacity-20" 
-                   style={{ backgroundImage: 'linear-gradient(var(--color-jarvis-accent) 1px, transparent 1px), linear-gradient(90deg, var(--color-jarvis-accent) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+                   style={{ backgroundImage: 'linear-gradient(var(--color-jarvis-gold) 1px, transparent 1px), linear-gradient(90deg, var(--color-jarvis-gold) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
               
               {/* Scanline Effect */}
-              <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(230,197,106,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_4px,3px_100%]" />
+              <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,215,0,0.03),rgba(218,165,32,0.01),rgba(255,215,0,0.03))] bg-[length:100%_4px,3px_100%]" />
               
               {/* Flicker Overlay */}
               <motion.div 
@@ -295,9 +414,9 @@ export const JarvisUI: React.FC = () => {
               </button>
               
               <div className="absolute bottom-4 left-6 flex items-center gap-3 z-20">
-                <div className="w-2 h-2 rounded-full bg-jarvis-accent animate-ping" />
-                <ImageIcon className="text-jarvis-accent" size={20} />
-                <span className="font-display text-xs tracking-widest text-jarvis-accent uppercase">Holographic Projection: 3D Render Active</span>
+                <div className="w-2 h-2 rounded-full bg-jarvis-gold animate-ping" />
+                <ImageIcon className="text-jarvis-gold" size={20} />
+                <span className="font-display text-xs tracking-widest text-jarvis-gold uppercase">Holographic Projection: 3D Render Active</span>
               </div>
             </motion.div>
           </motion.div>
@@ -313,7 +432,7 @@ export const JarvisUI: React.FC = () => {
             exit={{ opacity: 0, scale: 0.8, y: 50 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/60 backdrop-blur-md"
           >
-            <div className="relative max-w-5xl w-full aspect-video glass-panel overflow-hidden border-2 border-jarvis-accent/50 shadow-[0_0_100px_rgba(230,197,106,0.2)]">
+            <div className="relative max-w-5xl w-full aspect-video glass-panel overflow-hidden border-2 border-jarvis-gold/50 shadow-[0_0_100px_rgba(255,215,0,0.2)]">
               <YouTube 
                 videoId={youtubeVideoId} 
                 className="w-full h-full"
@@ -335,8 +454,8 @@ export const JarvisUI: React.FC = () => {
               </button>
               
               <div className="absolute bottom-4 left-6 flex items-center gap-3 pointer-events-none">
-                <Youtube className="text-jarvis-accent" size={20} />
-                <span className="font-display text-xs tracking-widest text-jarvis-accent uppercase">YouTube Neural Stream Active</span>
+                <Youtube className="text-jarvis-gold" size={20} />
+                <span className="font-display text-xs tracking-widest text-jarvis-gold uppercase">YouTube Neural Stream Active</span>
               </div>
             </div>
           </motion.div>
@@ -351,7 +470,7 @@ export const JarvisUI: React.FC = () => {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.05 }}
-            className="w-full max-w-[1400px] min-h-[calc(100dvh-2rem)] md:min-h-[calc(100dvh-3rem)] grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 z-10 px-2 md:px-4 justify-items-center"
+            className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-6 z-10 px-4 md:px-0 justify-items-center"
           >
             
             
@@ -359,10 +478,23 @@ export const JarvisUI: React.FC = () => {
         {/* Center Column: Core Reactor */}
         <div className="md:col-span-6 md:col-start-4 flex flex-col items-center justify-center space-y-6 md:space-y-8 order-1 md:order-2 py-4 md:py-0">
           <div className="relative group scale-75 md:scale-100">
+            {/* Voice Readiness Indicator */}
+            <AnimatePresence>
+              {isListening && !isSpeaking && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: [0.2, 0.5, 0.2], scale: [1, 1.1, 1] }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute inset-[-60px] rounded-full border-2 border-jarvis-gold/20 blur-md pointer-events-none"
+                />
+              )}
+            </AnimatePresence>
+ 
             {/* Outer Decorative Rings */}
-            <div className="absolute inset-[-40px] rounded-full border border-jarvis-accent/5 pointer-events-none" />
-            <div className="absolute inset-[-20px] rounded-full border border-jarvis-accent/10 border-dashed pointer-events-none" />
-
+            <div className="absolute inset-[-40px] rounded-full border border-jarvis-gold/5 pointer-events-none" />
+            <div className="absolute inset-[-20px] rounded-full border border-jarvis-gold/10 border-dashed pointer-events-none" />
+ 
             {/* Main Rings */}
             <motion.div 
               animate={{ 
@@ -371,9 +503,9 @@ export const JarvisUI: React.FC = () => {
               transition={{ 
                 scale: { duration: isSpeaking ? 0.5 : 3, repeat: Infinity, ease: "easeInOut" }
               }}
-              className="w-48 h-48 md:w-64 md:h-64 rounded-full border-2 border-dashed border-jarvis-accent/20 flex items-center justify-center"
+              className="w-48 h-48 md:w-64 md:h-64 rounded-full border-2 border-dashed border-jarvis-gold/20 flex items-center justify-center"
             >
-              <div className="w-36 h-36 md:w-48 md:h-48 rounded-full border border-jarvis-accent/40 flex items-center justify-center">
+              <div className="w-36 h-36 md:w-48 md:h-48 rounded-full border border-jarvis-gold/40 flex items-center justify-center">
                 {/* Talking Waveform Rings */}
                 <AnimatePresence>
                   {isSpeaking && (
@@ -390,7 +522,7 @@ export const JarvisUI: React.FC = () => {
                             delay: i * 0.5,
                             ease: "easeOut"
                           }}
-                          className="absolute inset-0 rounded-full border border-jarvis-accent/30"
+                          className="absolute inset-0 rounded-full border border-jarvis-gold/30"
                         />
                       ))}
                     </>
@@ -398,7 +530,7 @@ export const JarvisUI: React.FC = () => {
                 </AnimatePresence>
               </div>
             </motion.div>
-
+ 
             {/* Core */}
             <motion.button
               onClick={handleToggle}
@@ -406,12 +538,12 @@ export const JarvisUI: React.FC = () => {
               whileTap={{ scale: 0.95 }}
               animate={{
                 boxShadow: isSpeaking 
-                  ? "0 0 80px rgba(230, 197, 106, 0.8)" 
+                  ? "0 0 80px rgba(255, 215, 0, 0.8)" 
                   : isConnected 
-                    ? "0 0 60px rgba(230, 197, 106, 0.4)" 
+                    ? "0 0 60px rgba(255, 215, 0, 0.4)" 
                     : "0 0 20px rgba(255, 255, 255, 0.1)"
               }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 md:w-40 md:h-40 rounded-full bg-black border-2 border-jarvis-accent/30 flex items-center justify-center group cursor-pointer overflow-hidden z-20 shadow-[inset_0_0_20px_rgba(230,197,106,0.2)]"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 md:w-40 md:h-40 rounded-full bg-black border-2 border-jarvis-gold/30 flex items-center justify-center group cursor-pointer overflow-hidden z-20 shadow-[inset_0_0_20px_rgba(255,215,0,0.2)]"
             >
               <AnimatePresence mode="wait">
                 <motion.div
@@ -439,35 +571,22 @@ export const JarvisUI: React.FC = () => {
                     />
                   )}
                   
-                  <div className="absolute inset-3 rounded-full border border-jarvis-accent/25 bg-black/80 flex items-center justify-center overflow-hidden">
-                    <div className="flex items-end gap-1 h-16 md:h-20">
-                      {[...Array(24)].map((_, i) => {
-                        const base = 8 + ((i % 5) * 4);
-                        const peak = base + (audioLevel * 42) + ((i % 3) * 7);
-                        return (
-                          <motion.div
-                            key={`wave-${i}`}
-                            animate={{
-                              height: isSpeaking ? [base, peak, base + 4] : [6, 10, 6],
-                              opacity: isSpeaking ? [0.45, 1, 0.45] : [0.2, 0.45, 0.2]
-                            }}
-                            transition={{ duration: 0.32, repeat: Infinity, ease: 'easeInOut', delay: i * 0.02 }}
-                            className="w-1 rounded-full bg-jarvis-accent shadow-[0_0_10px_rgba(230,197,106,0.8)]"
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <img 
+                    src="/jarvis-logo.svg" 
+                    alt="JARVIS Core" 
+                    className="w-full h-full object-contain mix-blend-screen"
+                    referrerPolicy="no-referrer"
+                  />
                   
                   {/* Internal Glow */}
                   {isConnected && (
                     <motion.div 
                       animate={{ opacity: [0.2, 0.5, 0.2] }}
                       transition={{ duration: 2, repeat: Infinity }}
-                      className="absolute inset-0 bg-jarvis-accent/20 rounded-full blur-xl pointer-events-none"
+                      className="absolute inset-0 bg-jarvis-gold/20 rounded-full blur-xl pointer-events-none"
                     />
                   )}
-
+ 
                   {/* Mouth Waveform Overlay */}
                   <AnimatePresence>
                     {isSpeaking && (
@@ -483,7 +602,7 @@ export const JarvisUI: React.FC = () => {
                               key={`mouth-${i}`}
                               animate={{ height: [6, 28, 10, 36, 6][i % 5], opacity: [0.4, 1, 0.4] }}
                               transition={{ duration: 0.35, repeat: Infinity, ease: "easeInOut", delay: i * 0.04 }}
-                              className="w-1.5 bg-jarvis-accent rounded-full shadow-[0_0_10px_rgba(230,197,106,0.8)]"
+                              className="w-1.5 bg-jarvis-gold rounded-full shadow-[0_0_10px_rgba(255,215,0,0.8)]"
                             />
                           ))}
                         </div>
@@ -501,7 +620,7 @@ export const JarvisUI: React.FC = () => {
                 <div 
                   className="absolute inset-0 rounded-full"
                   style={{
-                    background: "conic-gradient(from 0deg, rgba(230,197,106,0.22) 0%, transparent 60%, rgba(230,197,106,0.22) 100%)",
+                    background: "conic-gradient(from 0deg, rgba(255,215,0,0.22) 0%, transparent 60%, rgba(255,215,0,0.22) 100%)",
                     WebkitMaskImage: "radial-gradient(circle at center, transparent 48%, black 52%)",
                     maskImage: "radial-gradient(circle at center, transparent 48%, black 52%)",
                     opacity: 0.8
@@ -514,17 +633,17 @@ export const JarvisUI: React.FC = () => {
                 animate={{ rotate: 360 }}
                 transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
               >
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[130%] w-2 h-2 rounded-full bg-jarvis-accent shadow-[0_0_10px_rgba(230,197,106,0.8)]" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-[130%] w-2 h-2 rounded-full bg-jarvis-accent/80 shadow-[0_0_10px_rgba(230,197,106,0.6)]" />
-                <div className="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-[130%] w-2 h-2 rounded-full bg-jarvis-accent/60 shadow-[0_0_10px_rgba(230,197,106,0.5)]" />
-                <div className="absolute top-1/2 left-1/2 -translate-y-1/2 translate-x-[130%] w-2 h-2 rounded-full bg-jarvis-accent/60 shadow-[0_0_10px_rgba(230,197,106,0.5)]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[130%] w-2 h-2 rounded-full bg-jarvis-gold shadow-[0_0_10px_rgba(255,215,0,0.8)]" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 translate-y-[130%] w-2 h-2 rounded-full bg-jarvis-gold/80 shadow-[0_0_10px_rgba(255,215,0,0.6)]" />
+                <div className="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-[130%] w-2 h-2 rounded-full bg-jarvis-gold/60 shadow-[0_0_10px_rgba(255,215,0,0.5)]" />
+                <div className="absolute top-1/2 left-1/2 -translate-y-1/2 translate-x-[130%] w-2 h-2 rounded-full bg-jarvis-gold/60 shadow-[0_0_10px_rgba(255,215,0,0.5)]" />
               </motion.div>
               
               <div className="absolute inset-0 pointer-events-none">
                 {[...Array(12)].map((_, i) => (
                   <motion.div
                     key={`beam-${i}`}
-                    className="absolute top-1/2 left-1/2 w-0.5 bg-jarvis-accent/40 rounded-sm origin-bottom"
+                    className="absolute top-1/2 left-1/2 w-0.5 bg-jarvis-gold/40 rounded-sm origin-bottom"
                     style={{ transform: `rotate(${i * 30}deg) translateY(-90px)` }}
                     animate={{ height: isSpeaking ? [10, 30, 14, 36, 12][i % 5] : [8, 20, 12, 24, 10][i % 5], opacity: isSpeaking ? [0.6, 1, 0.6] : [0.3, 0.7, 0.3] }}
                     transition={{ duration: isSpeaking ? 0.6 : 1.8, repeat: Infinity, ease: "easeInOut", delay: i * 0.05 }}
@@ -536,7 +655,7 @@ export const JarvisUI: React.FC = () => {
                 {[...Array(20)].map((_, i) => (
                   <motion.div
                     key={`particle-${i}`}
-                    className="absolute w-1 h-1 rounded-full bg-jarvis-accent/40"
+                    className="absolute w-1 h-1 rounded-full bg-jarvis-gold/40"
                     style={{ left: `${10 + (i * 4.5) % 90}%`, top: `${20 + (i * 3.7) % 60}%` }}
                     animate={{ opacity: [0, 0.8, 0], y: [-6, 6, -6] }}
                     transition={{ duration: 3 + (i % 5) * 0.4, repeat: Infinity, ease: "easeInOut", delay: (i % 10) * 0.1 }}
@@ -548,7 +667,7 @@ export const JarvisUI: React.FC = () => {
                 {[...Array(24)].map((_, i) => (
                   <motion.div
                     key={`tick-${i}`}
-                    className="absolute top-1/2 left-1/2 w-1 bg-jarvis-accent/50 rounded-sm origin-bottom"
+                    className="absolute top-1/2 left-1/2 w-1 bg-jarvis-gold/50 rounded-sm origin-bottom"
                     style={{ transform: `rotate(${i * 15}deg) translateY(-78px)`, height: 6 }}
                     animate={{ scaleY: isSpeaking ? [1, 1.8, 1] : [1, 1.3, 1], opacity: isSpeaking ? [0.5, 1, 0.5] : [0.3, 0.8, 0.3] }}
                     transition={{ duration: isSpeaking ? 0.7 : 1.6, repeat: Infinity, ease: "easeInOut", delay: i * 0.03 }}
@@ -557,10 +676,10 @@ export const JarvisUI: React.FC = () => {
               </div>
               
               <motion.div
-                className="absolute inset-0 rounded-full border border-jarvis-accent/30 pointer-events-none"
+                className="absolute inset-0 rounded-full border border-jarvis-gold/30 pointer-events-none"
                 animate={{ scale: [0.95, 1.05, 0.95], opacity: [0.4, 0.8, 0.4] }}
                 transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                style={{ boxShadow: "0 0 30px rgba(230,197,106,0.25)" }}
+                style={{ boxShadow: "0 0 30px rgba(255,215,0,0.25)" }}
               />
               
               <motion.div 
@@ -571,28 +690,28 @@ export const JarvisUI: React.FC = () => {
                 <div 
                   className="absolute inset-0 rounded-full"
                   style={{
-                    background: "conic-gradient(from 0deg, transparent 0%, rgba(230,197,106,0.35) 8%, transparent 18%)",
+                    background: "conic-gradient(from 0deg, transparent 0%, rgba(255,215,0,0.35) 8%, transparent 18%)",
                     WebkitMaskImage: "radial-gradient(circle at center, transparent 45%, black 55%)",
                     maskImage: "radial-gradient(circle at center, transparent 45%, black 55%)"
                   }}
                 />
               </motion.div>
-
+ 
               <div className="absolute inset-0 pointer-events-none">
                 {[...Array(48)].map((_, i) => (
                   <motion.div
                     key={`micro-${i}`}
-                    className="absolute top-1/2 left-1/2 w-0.5 bg-jarvis-accent/30 rounded-sm origin-bottom"
+                    className="absolute top-1/2 left-1/2 w-0.5 bg-jarvis-gold/30 rounded-sm origin-bottom"
                     style={{ transform: `rotate(${i * 7.5}deg) translateY(-70px)`, height: 3 }}
                     animate={{ opacity: isSpeaking ? [0.4, 0.9, 0.4] : [0.2, 0.6, 0.2] }}
                     transition={{ duration: isSpeaking ? 0.8 : 1.6, repeat: Infinity, ease: "easeInOut", delay: i * 0.02 }}
                   />
                 ))}
               </div>
-
+ 
               <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-1/2 left-0 right-0 h-px bg-jarvis-accent/20" />
-                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-jarvis-accent/20" />
+                <div className="absolute top-1/2 left-0 right-0 h-px bg-jarvis-gold/20" />
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-jarvis-gold/20" />
               </div>
 
               {/* Scanline overlay on the core */}
@@ -604,7 +723,7 @@ export const JarvisUI: React.FC = () => {
                   initial={{ top: "-100%" }}
                   animate={{ top: "200%" }}
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-x-0 h-1 bg-jarvis-accent/50 shadow-[0_0_15px_rgba(230,197,106,0.8)] z-30 pointer-events-none"
+                  className="absolute inset-x-0 h-1 bg-jarvis-gold/50 shadow-[0_0_15px_rgba(255,215,0,0.8)] z-30 pointer-events-none"
                 />
               )}
               
@@ -617,64 +736,18 @@ export const JarvisUI: React.FC = () => {
               
               {isConnecting && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                   <div className="w-full h-full border-4 border-t-jarvis-accent border-transparent rounded-full animate-spin opacity-40" />
+                   <div className="w-full h-full border-4 border-t-jarvis-gold border-transparent rounded-full animate-spin opacity-40" />
                 </div>
               )}
             </motion.button>
           </div>
 
-          <div className="text-center space-y-4">
-            <div className="flex items-center justify-center gap-6">
-              <StatusIndicator label="Listening" active={isListening && !isSpeaking && !isProcessing} />
-              <StatusIndicator label="Processing" active={isProcessing} />
-              <StatusIndicator label="Speaking" active={isSpeaking} />
-            </div>
+          <div className="text-center">
             <div className="space-y-2">
-              <h1 className="font-display text-xl md:text-2xl tracking-[0.2em] text-white uppercase gold-accent">
-                Jarvis ONEMSU
-              </h1>
               <p className="text-white/40 font-mono text-[10px] uppercase tracking-widest">
                 Neural Interface Active
               </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-4 pt-4">
-            <button 
-              onClick={() => setIsListening(!isListening)}
-              className={`p-3 rounded-full border transition-all ${
-                isListening 
-                  ? 'bg-jarvis-accent/20 border-jarvis-accent text-jarvis-accent shadow-[0_0_15px_rgba(230,197,106,0.4)]' 
-                  : 'bg-white/5 border-white/10 text-white/40'
-              }`}
-              title={isListening ? "Mute Microphone" : "Unmute Microphone"}
-            >
-              {isListening ? <Mic size={20} /> : <MicOff size={20} />}
-            </button>
-            <button 
-              onClick={() => setCurrentView('chat')}
-              className="p-3 rounded-full bg-jarvis-accent/10 border border-jarvis-accent/30 text-jarvis-accent hover:bg-jarvis-accent/20 transition-all"
-              title="Open Chat"
-            >
-              <MessageSquare size={20} />
-            </button>
-            <button 
-              onClick={() => {
-                disconnect();
-                setTimeout(connect, 500);
-              }}
-              className="p-3 rounded-full bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all"
-              title="Reconnect System"
-            >
-              <Activity size={20} />
-            </button>
-            <button 
-              onClick={() => setIsCommandPaletteOpen(true)}
-              className="p-3 rounded-full bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all"
-              title="Command Palette"
-            >
-              <CommandIcon size={20} />
-            </button>
           </div>
         </div>
 
@@ -692,13 +765,13 @@ export const JarvisUI: React.FC = () => {
           >
             <ChatSystem 
               messages={messages} 
-              onSendMessage={sendTextContext}
-              onAttachImage={handleChatImageUpload}
+              onSendMessage={sendTextContext} 
+              onClearChat={clearMessages}
               isProcessing={isProcessing} 
             />
             <button 
               onClick={() => setCurrentView('main')}
-              className="mt-4 w-full p-3 glass-panel text-[10px] font-display uppercase tracking-widest text-white/40 hover:text-jarvis-accent transition-colors"
+              className="mt-4 w-full p-3 glass-panel text-[10px] font-display uppercase tracking-widest text-white/40 hover:text-jarvis-gold transition-colors"
             >
               Return to Core
             </button>
@@ -718,6 +791,7 @@ export const JarvisUI: React.FC = () => {
               <OSModuleTab active={osModule === 'graph'} onClick={() => setOsModule('graph')} label="Knowledge Graph" />
               <OSModuleTab active={osModule === 'running'} onClick={() => setOsModule('running')} label="Running Track" />
               <OSModuleTab active={osModule === 'food'} onClick={() => setOsModule('food')} label="Food Intake" />
+              <OSModuleTab active={osModule === 'builder'} onClick={() => setOsModule('builder')} label="Neural Builder" />
               <OSModuleTab active={osModule === 'automation'} onClick={() => setOsModule('automation')} label="Automations" />
               <OSModuleTab active={osModule === 'goals'} onClick={() => setOsModule('goals')} label="Objectives" />
               <OSModuleTab active={osModule === 'learning'} onClick={() => setOsModule('learning')} label="Learning" />
@@ -727,7 +801,7 @@ export const JarvisUI: React.FC = () => {
               <OSModuleTab active={osModule === 'team'} onClick={() => setOsModule('team')} label="Agent Team" />
               <button 
                 onClick={() => setCurrentView('main')}
-                className="ml-auto px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-display uppercase tracking-widest text-white/40 hover:text-jarvis-accent transition-colors"
+                className="ml-auto px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-display uppercase tracking-widest text-white/40 hover:text-jarvis-gold transition-colors"
               >
                 Exit OS
               </button>
@@ -739,6 +813,7 @@ export const JarvisUI: React.FC = () => {
                 {osModule === 'graph' && <motion.div key="graph" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full"><KnowledgeGraph data={graphData} /></motion.div>}
                 {osModule === 'running' && <motion.div key="running" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full"><RunningTracker runs={runs} /></motion.div>}
                 {osModule === 'food' && <motion.div key="food" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full"><FoodTracker logs={foodLogs} /></motion.div>}
+                {osModule === 'builder' && <motion.div key="builder" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full"><AIBuilder /></motion.div>}
                 {osModule === 'automation' && <motion.div key="automation" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full"><AutomationBuilder automations={automations} onSave={handleSaveAutomation} /></motion.div>}
                 {osModule === 'goals' && <motion.div key="goals" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full"><GoalTracker goals={goals} /></motion.div>}
                 {osModule === 'learning' && <motion.div key="learning" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full"><LearningCompanion data={learningData} /></motion.div>}
@@ -768,7 +843,7 @@ export const JarvisUI: React.FC = () => {
                 x: { duration: 4, repeat: Infinity, ease: "linear" },
                 scaleX: { duration: 4, repeat: Infinity, times: [0, 0.45, 0.5, 0.95, 1] }
               }}
-              className="text-jarvis-accent"
+              className="text-jarvis-gold"
             >
               <div className="md:hidden">
                 <Dog size={80} strokeWidth={1} />
@@ -777,7 +852,7 @@ export const JarvisUI: React.FC = () => {
                 <Dog size={120} strokeWidth={1} />
               </div>
             </motion.div>
-            <div className="text-jarvis-accent/40 font-display tracking-[0.5em] text-sm uppercase animate-pulse">
+            <div className="text-jarvis-gold/40 font-display tracking-[0.5em] text-sm uppercase animate-pulse">
               System Standby
             </div>
           </motion.div>
@@ -806,12 +881,26 @@ export const JarvisUI: React.FC = () => {
   );
 };
 
+const SidebarButton = ({ icon: Icon, label, active, onClick }: { icon: any, label: string, active: boolean, onClick: () => void }) => (
+  <button 
+    onClick={onClick}
+    className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all border ${
+      active 
+        ? 'bg-jarvis-gold/10 border-jarvis-gold/30 text-jarvis-gold shadow-[0_0_15px_rgba(255,215,0,0.1)]' 
+        : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
+    }`}
+  >
+    <Icon size={16} />
+    <span className="text-[10px] font-display uppercase tracking-widest">{label}</span>
+  </button>
+);
+
 const OSModuleTab = ({ active, onClick, label }: { active: boolean, onClick: () => void, label: string }) => (
   <button 
     onClick={onClick}
     className={`px-6 py-3 rounded-xl font-display text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${
       active 
-        ? 'bg-jarvis-accent/20 text-jarvis-accent border border-jarvis-accent/30 shadow-[0_0_15px_rgba(230,197,106,0.2)]' 
+        ? 'bg-jarvis-gold/20 text-jarvis-gold border border-jarvis-gold/30 shadow-[0_0_15px_rgba(255,215,0,0.2)]' 
         : 'bg-white/5 text-white/40 border border-white/10 hover:bg-white/10'
     }`}
   >
@@ -822,17 +911,17 @@ const OSModuleTab = ({ active, onClick, label }: { active: boolean, onClick: () 
 const StatusIndicator = ({ label, active }: { label: string; active: boolean }) => (
   <div className="flex flex-col items-center gap-1 md:gap-1.5">
     <div className="relative">
-      <div className={`w-1 md:w-1.5 h-1 md:h-1.5 rounded-full transition-all duration-300 ${active ? 'bg-jarvis-accent shadow-[0_0_8px_rgba(230,197,106,0.8)]' : 'bg-white/10'}`} />
+      <div className={`w-1 md:w-1.5 h-1 md:h-1.5 rounded-full transition-all duration-300 ${active ? 'bg-jarvis-gold shadow-[0_0_8px_rgba(255,215,0,0.8)]' : 'bg-white/10'}`} />
       {active && (
         <motion.div 
           initial={{ scale: 1, opacity: 0.5 }}
           animate={{ scale: 2.5, opacity: 0 }}
           transition={{ duration: 1.5, repeat: Infinity }}
-          className="absolute inset-0 rounded-full bg-jarvis-accent/30"
+          className="absolute inset-0 rounded-full bg-jarvis-gold/30"
         />
       )}
     </div>
-    <span className={`text-[7px] md:text-[8px] font-mono uppercase tracking-widest transition-colors duration-300 ${active ? 'text-jarvis-accent' : 'text-white/20'}`}>
+    <span className={`text-[7px] md:text-[8px] font-mono uppercase tracking-widest transition-colors duration-300 ${active ? 'text-jarvis-gold' : 'text-white/20'}`}>
       {label}
     </span>
   </div>
@@ -842,8 +931,8 @@ const StatusItem = ({ label, value, active }: { label: string; value?: string; a
   <div className="flex items-center justify-between">
     <div className="flex flex-col">
       <span className="text-[9px] md:text-[10px] font-mono text-white/40 uppercase leading-none mb-1">{label}</span>
-      {value && <span className="text-[10px] md:text-xs font-display text-jarvis-accent uppercase tracking-wider">{value}</span>}
+      {value && <span className="text-[10px] md:text-xs font-display text-jarvis-gold uppercase tracking-wider">{value}</span>}
     </div>
-    <div className={`w-1.5 md:w-2 h-1.5 md:h-2 rounded-full ${active ? 'bg-jarvis-accent shadow-[0_0_10px_rgba(230,197,106,0.8)]' : 'bg-white/10'}`} />
+    <div className={`w-1.5 md:w-2 h-1.5 md:h-2 rounded-full ${active ? 'bg-jarvis-gold shadow-[0_0_10px_rgba(255,215,0,0.8)]' : 'bg-white/10'}`} />
   </div>
 );

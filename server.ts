@@ -217,6 +217,16 @@ app.post("/api/messages", (req, res) => {
   }
 });
 
+app.post("/api/messages/clear", (req, res) => {
+  try {
+    const filePath = getUserFile(req.sessionId!, "messages.json");
+    fs.writeFileSync(filePath, JSON.stringify([], null, 2));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to clear messages" });
+  }
+});
+
 // State Routes
 app.get("/api/state", (req, res) => {
   try {

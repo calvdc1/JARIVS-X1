@@ -21,8 +21,6 @@ export const useLiveAPI = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0);
-  const [audioHealth, setAudioHealth] = useState({ bufferMs: 0, latencyMs: 0, stutterEvents: 0 });
   const [isBackgroundListening, setIsBackgroundListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
@@ -31,6 +29,7 @@ export const useLiveAPI = () => {
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<'main' | 'workshop' | 'standby' | 'chat'>('main');
   const [workspaceMode, setWorkspaceMode] = useState<'chat' | 'document' | 'code' | 'analysis' | 'creative' | 'analytical' | 'creative_divergence' | 'devils_advocate' | 'systems_thinking'>('chat');
+  const [voiceGender, setVoiceGender] = useState<'male' | 'female'>('male');
   const [personalities, setPersonalities] = useState<any[]>([]);
   const [activePersonalityId, setActivePersonalityId] = useState<string>('jarvis');
   const [automations, setAutomations] = useState<any[]>([]);
@@ -39,6 +38,8 @@ export const useLiveAPI = () => {
   const [memories, setMemories] = useState<any[]>([]);
   const [decisions, setDecisions] = useState<any[]>([]);
   const [graphData, setGraphData] = useState<any>({ nodes: [], links: [] });
+  const [runs, setRuns] = useState<any[]>([]);
+  const [foodLogs, setFoodLogs] = useState<any[]>([]);
   const [userProfile, setUserProfile] = useState<any>({ 
     name: 'Sir', 
     xp: 0, 
@@ -84,16 +85,6 @@ export const useLiveAPI = () => {
   const audioQueueRef = useRef<Float32Array[]>([]);
   const nextStartTimeRef = useRef<number>(0);
   const activeSourceNodesRef = useRef<AudioBufferSourceNode[]>([]);
-  const lastChunkTimeRef = useRef<number>(0);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setAudioLevel(prev => Math.max(0, prev * 0.9 - 0.01));
-      setAudioHealth(prev => ({ ...prev, bufferMs: Math.max(0, prev.bufferMs - 40) }));
-    }, 60);
-
-    return () => window.clearInterval(timer);
-  }, []);
 
   // Check Spotify status on mount and initialize Player
   useEffect(() => {
@@ -162,6 +153,13 @@ export const useLiveAPI = () => {
         setMemories(await memRes.json());
         setDecisions(await decRes.json());
         setGraphData(await graphRes.json());
+        
+        const [runsRes, foodRes] = await Promise.all([
+          fetch('/api/runs'),
+          fetch('/api/food')
+        ]);
+        setRuns(await runsRes.json());
+        setFoodLogs(await foodRes.json());
       } catch (error) {
         console.error("Failed to fetch extra OS data");
       }
@@ -280,7 +278,7 @@ export const useLiveAPI = () => {
 
     const currentTime = audioContext.currentTime;
     if (nextStartTimeRef.current < currentTime) {
-      nextStartTimeRef.current = currentTime + 0.04; // Balanced buffer for lower stutter
+      nextStartTimeRef.current = currentTime + 0.1; // Increased buffer for smoother playback
     }
 
     source.start(nextStartTimeRef.current);
@@ -322,6 +320,15 @@ export const useLiveAPI = () => {
       });
     } catch (error) {
       console.error("Failed to save message");
+    }
+  };
+
+  const clearMessages = async () => {
+    try {
+      await fetch('/api/messages/clear', { method: 'POST' });
+      setMessages([]);
+    } catch (error) {
+      console.error("Failed to clear messages");
     }
   };
 
@@ -516,6 +523,11 @@ export const useLiveAPI = () => {
     }
   };
 
+  const handleSwitchVoiceGender = (gender: 'male' | 'female') => {
+    setVoiceGender(gender);
+    return { success: true, gender };
+  };
+
   const sendTextContext = useCallback((text: string) => {
     if (sessionRef.current) {
       sessionRef.current.sendRealtimeInput({
@@ -523,23 +535,6 @@ export const useLiveAPI = () => {
           turns: [{
             role: "user",
             parts: [{ text }]
-          }],
-          turnComplete: true
-        }
-      });
-    }
-  }, []);
-
-  const sendMultimodalContext = useCallback((text: string, base64ImageData: string, mimeType: string) => {
-    if (sessionRef.current) {
-      sessionRef.current.sendRealtimeInput({
-        clientContent: {
-          turns: [{
-            role: "user",
-            parts: [
-              { text },
-              { inlineData: { data: base64ImageData, mimeType } }
-            ]
           }],
           turnComplete: true
         }
@@ -738,7 +733,7 @@ export const useLiveAPI = () => {
           speechConfig: {
             voiceConfig: { 
               prebuiltVoiceConfig: { 
-                voiceName: activePersonalityId === 'friday' ? 'Kore' : activePersonalityId === 'edith' ? 'Puck' : 'Charon' 
+                voiceName: voiceGender === 'female' ? 'Kore' : (activePersonalityId === 'friday' ? 'Kore' : activePersonalityId === 'edith' ? 'Puck' : 'Charon')
               } 
             },
           },
@@ -899,6 +894,17 @@ export const useLiveAPI = () => {
                   }
                 },
                 {
+                  name: "switch_voice_gender",
+                  description: "Switch between male and female voice tones.",
+                  parameters: {
+                    type: Type.OBJECT,
+                    properties: {
+                      gender: { type: Type.STRING, enum: ["male", "female"] }
+                    },
+                    required: ["gender"]
+                  }
+                },
+                {
                   name: "save_memory",
                   description: "Save information to long-term memory.",
                   parameters: {
@@ -1042,23 +1048,7 @@ export const useLiveAPI = () => {
                   for (let i = 0; i < pcmData.length; i++) {
                     floatData[i] = pcmData[i] / 32768.0;
                   }
-                  const now = Date.now();
-                  if (lastChunkTimeRef.current && now - lastChunkTimeRef.current > 450 && isSpeakingRef.current) {
-                    setAudioHealth(prev => ({ ...prev, stutterEvents: prev.stutterEvents + 1 }));
-                  }
-                  lastChunkTimeRef.current = now;
-
-                  let rms = 0;
-                  for (let i = 0; i < floatData.length; i += 24) {
-                    rms += floatData[i] * floatData[i];
-                  }
-                  rms = Math.sqrt(rms / Math.max(1, floatData.length / 24));
-                  setAudioLevel(prev => (prev * 0.35) + (Math.min(1, rms * 4) * 0.65));
-
                   audioQueueRef.current.push(floatData);
-                  const queuedMs = audioQueueRef.current.reduce((sum, chunk) => sum + (chunk.length / 24000) * 1000, 0);
-                  const latencyMs = audioContextRef.current ? Math.max(0, (nextStartTimeRef.current - audioContextRef.current.currentTime) * 1000) : 0;
-                  setAudioHealth(prev => ({ ...prev, bufferMs: queuedMs, latencyMs }));
                   shouldPlay = true;
                 }
                 if (part.text) {
@@ -1114,6 +1104,8 @@ export const useLiveAPI = () => {
                     result = await handleSyncGraph(args);
                   } else if (name === 'switch_personality') {
                     result = await handleSwitchPersonality(args.id as string);
+                  } else if (name === 'switch_voice_gender') {
+                    result = handleSwitchVoiceGender(args.gender as any);
                   }
 
                   if (result) {
@@ -1221,8 +1213,6 @@ export const useLiveAPI = () => {
       audioContextRef.current = null;
     }
     setIsConnected(false);
-    setAudioLevel(0);
-    setAudioHealth({ bufferMs: 0, latencyMs: 0, stutterEvents: 0 });
   }, []);
 
   return {
@@ -1231,9 +1221,8 @@ export const useLiveAPI = () => {
     connect,
     disconnect,
     messages,
+    clearMessages,
     isSpeaking,
-    audioLevel,
-    audioHealth,
     isSpotifyConnected,
     presentedImage,
     setPresentedImage,
@@ -1244,17 +1233,20 @@ export const useLiveAPI = () => {
     setCurrentView,
     isProcessing,
     isListening,
+    setIsListening,
     isBackgroundListening,
     toggleBackgroundListening,
     personalities,
     activePersonalityId,
     handleSwitchPersonality,
+    handleSwitchVoiceGender,
     spotifyTrack,
     sendTextContext,
-    sendMultimodalContext,
     transferPlayback,
     workspaceMode,
     setWorkspaceMode,
+    voiceGender,
+    setVoiceGender,
     userProfile,
     automations,
     goals,
@@ -1262,6 +1254,8 @@ export const useLiveAPI = () => {
     memories,
     decisions,
     graphData,
+    runs,
+    foodLogs,
     handleSaveAutomation,
     handleSaveGoal,
     handleUpdateLearning,
