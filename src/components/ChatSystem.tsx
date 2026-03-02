@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, User, Bot, Terminal, Maximize2, Minimize2, Copy, Check, Trash2 } from 'lucide-react';
+import { Send, User, Bot, Terminal, Maximize2, Minimize2, Copy, Check, Trash2, FileText, Link2, Wand2, Code2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface Message {
@@ -40,6 +40,33 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
   };
+
+  const quickActions = [
+    {
+      label: 'Summarize',
+      icon: FileText,
+      prompt:
+        'Give me a concise summary of this discussion. Use bullet points and include key actions I should take next.'
+    },
+    {
+      label: 'Answer + Sources',
+      icon: Link2,
+      prompt:
+        'Answer my last question clearly and add a Sources section with links, docs, or references used.'
+    },
+    {
+      label: 'Prompt Builder',
+      icon: Wand2,
+      prompt:
+        'Create a high-quality reusable prompt template for my goal. Include variables, constraints, and an example output format.'
+    },
+    {
+      label: 'Build App Plan',
+      icon: Code2,
+      prompt:
+        'Help me build an app/website from scratch. Give product scope, tech stack, architecture, milestones, and first code steps.'
+    }
+  ];
 
   return (
     <motion.div 
@@ -133,12 +160,27 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
 
       {/* Input */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-jarvis-gold/20 bg-black/20">
+        <div className="mb-3 flex flex-wrap gap-2">
+          {quickActions.map(({ label, icon: Icon, prompt }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => onSendMessage(prompt)}
+              disabled={isProcessing}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-[10px] uppercase tracking-wider text-white/70 hover:border-jarvis-gold/40 hover:text-jarvis-gold transition-colors disabled:opacity-40"
+            >
+              <Icon size={12} />
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div className="relative flex items-center">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a command or question..."
+            placeholder="Ask anything (summary, answer with sources, prompt, app/web build plan)..."
             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm focus:outline-none focus:border-jarvis-gold/50 transition-colors placeholder:text-white/20"
           />
           <button 

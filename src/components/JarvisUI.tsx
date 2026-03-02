@@ -72,8 +72,8 @@ export const JarvisUI: React.FC = () => {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [greeting, setGreeting] = useState('');
   const [osModule, setOsModule] = useState<'memory' | 'automation' | 'goals' | 'learning' | 'team' | 'decisions' | 'graph' | 'autopsy' | 'models' | 'running' | 'food' | 'builder'>('memory');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   useEffect(() => {
     const updateGreeting = () => {
@@ -144,133 +144,6 @@ export const JarvisUI: React.FC = () => {
       <Particles />
       
       <WorkspaceHUD mode={workspaceMode} isProcessing={isProcessing} />
-
-      {/* Sidebar Toggle Button */}
-      <button 
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="fixed top-6 left-6 z-50 p-2 rounded-lg glass-panel border-white/10 text-jarvis-gold hover:bg-jarvis-gold/10 transition-all"
-      >
-        <div className="flex flex-col gap-1 w-5">
-          <motion.div animate={{ width: isSidebarOpen ? 20 : 12 }} className="h-0.5 bg-current rounded-full" />
-          <motion.div animate={{ width: 20 }} className="h-0.5 bg-current rounded-full" />
-          <motion.div animate={{ width: isSidebarOpen ? 12 : 20 }} className="h-0.5 bg-current rounded-full" />
-        </div>
-      </button>
-
-      {/* Left Sidebar Header */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.div 
-            initial={{ x: -300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -300, opacity: 0 }}
-            className="fixed top-0 left-0 bottom-0 w-72 z-40 flex flex-col p-6 pt-20 bg-black/40 backdrop-blur-xl border-r border-white/5"
-          >
-            <div className="flex-1 flex flex-col gap-6 overflow-y-auto scrollbar-hide">
-              {/* User Profile Section */}
-              <div className="glass-panel p-4 flex flex-col gap-4 border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full border-2 border-jarvis-gold/30 p-0.5 bg-jarvis-gold/5">
-                    <div className="w-full h-full rounded-full overflow-hidden">
-                      <img src={userProfile.avatar} alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[8px] font-mono text-white/40 uppercase tracking-widest">Authorized User</span>
-                    <span className="text-xs font-display text-white uppercase tracking-wider">{userProfile.name}</span>
-                  </div>
-                </div>
-
-                <div className="h-px bg-white/5 w-full" />
-
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="text-[6px] font-mono text-white/20 uppercase leading-none">System Time</span>
-                      <span className="text-[10px] font-display text-jarvis-gold">{phTime}</span>
-                    </div>
-                    <div className="w-6 h-6 rounded-full border border-jarvis-gold/20 flex items-center justify-center bg-jarvis-gold/5">
-                      <Activity size={10} className="text-jarvis-gold animate-pulse" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="glass-panel px-2 py-1.5 flex flex-col border-white/5">
-                      <span className="text-[6px] font-mono text-white/20 uppercase leading-none">Level {userProfile.level}</span>
-                      <span className="text-[8px] font-display text-amber-400 uppercase">{userProfile.xp} XP</span>
-                    </div>
-                    <div className="glass-panel px-2 py-1.5 flex flex-col border-white/5">
-                      <span className="text-[6px] font-mono text-white/20 uppercase leading-none">Streak</span>
-                      <span className="text-[8px] font-display text-emerald-400 uppercase">{userProfile.streak} Days</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* System Controls */}
-              <div className="flex flex-col gap-2">
-                <span className="text-[8px] font-mono text-white/20 uppercase tracking-[0.2em] mb-1 ml-2">System Controls</span>
-                <div className="grid grid-cols-2 gap-2">
-                  <SidebarButton 
-                    icon={isListening ? Mic : MicOff} 
-                    label={isListening ? "Mute" : "Unmute"} 
-                    active={isListening} 
-                    onClick={() => setIsListening(!isListening)} 
-                  />
-                  <SidebarButton 
-                    icon={MessageSquare} 
-                    label="Chat" 
-                    active={currentView === 'chat'} 
-                    onClick={() => setCurrentView('chat')} 
-                  />
-                  <SidebarButton 
-                    icon={Activity} 
-                    label="Sync" 
-                    active={false} 
-                    onClick={() => { disconnect(); setTimeout(connect, 500); }} 
-                  />
-                  <SidebarButton 
-                    icon={CommandIcon} 
-                    label="Commands" 
-                    active={isCommandPaletteOpen} 
-                    onClick={() => setIsCommandPaletteOpen(true)} 
-                  />
-                </div>
-              </div>
-
-              {/* Navigation */}
-              <div className="flex flex-col gap-2">
-                <span className="text-[8px] font-mono text-white/20 uppercase tracking-[0.2em] mb-1 ml-2">Neural Modules</span>
-                <SidebarButton 
-                  icon={Terminal} 
-                  label="Neural Builder" 
-                  active={osModule === 'builder' && currentView === 'workshop'} 
-                  onClick={() => { setCurrentView('workshop'); setOsModule('builder'); }} 
-                />
-                <SidebarButton 
-                  icon={Database} 
-                  label="Visual Memory" 
-                  active={osModule === 'memory' && currentView === 'workshop'} 
-                  onClick={() => { setCurrentView('workshop'); setOsModule('memory'); }} 
-                />
-                <SidebarButton 
-                  icon={Activity} 
-                  label="Knowledge Graph" 
-                  active={osModule === 'graph' && currentView === 'workshop'} 
-                  onClick={() => { setCurrentView('workshop'); setOsModule('graph'); }} 
-                />
-              </div>
-
-              {/* Status Indicators */}
-              <div className="mt-auto pt-6 border-t border-white/5 flex items-center justify-between px-2">
-                <StatusIndicator label="Listen" active={isListening && !isSpeaking && !isProcessing} />
-                <StatusIndicator label="Process" active={isProcessing} />
-                <StatusIndicator label="Speak" active={isSpeaking} />
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Top Header - Just Logo/Speaking UI */}
       <div className="fixed top-0 left-0 right-0 h-20 z-30 flex items-center justify-center pointer-events-none">
@@ -470,10 +343,35 @@ export const JarvisUI: React.FC = () => {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.05 }}
-            className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-6 z-10 px-4 md:px-0 justify-items-center"
+            className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-6 z-10 px-4 md:px-0 justify-items-center relative"
           >
-            
-            
+            <div className="pointer-events-none absolute inset-0 -z-10">
+              <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-4 md:gap-8 opacity-70">
+                {[0, 1, 2].map((ring) => (
+                  <motion.div
+                    key={`hud-ring-${ring}`}
+                    animate={{ rotate: ring % 2 === 0 ? 360 : -360 }}
+                    transition={{ duration: 16 + ring * 5, repeat: Infinity, ease: "linear" }}
+                    className="w-14 h-14 md:w-20 md:h-20 rounded-full border border-jarvis-gold/35 relative"
+                  >
+                    <div className="absolute inset-2 rounded-full border border-dashed border-jarvis-gold/30" />
+                    <div className="absolute top-1/2 left-0 right-0 h-px bg-jarvis-gold/30" />
+                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-jarvis-gold/20" />
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="absolute top-[35%] left-2 md:left-10 right-2 md:right-10">
+                {["left", "right"].map((side) => (
+                  <div key={side} className={`relative h-20 md:h-28 ${side === "left" ? "" : "scale-x-[-1]"}`}>
+                    <div className="absolute left-0 right-0 top-1/2 h-px bg-gradient-to-r from-transparent via-jarvis-gold/40 to-transparent" />
+                    <div className="absolute left-[10%] right-[10%] top-[60%] h-px bg-gradient-to-r from-transparent via-jarvis-gold/25 to-transparent" />
+                    <div className="absolute left-[18%] top-[38%] w-20 md:w-40 h-px bg-jarvis-gold/30" />
+                    <div className="absolute right-[18%] top-[38%] w-20 md:w-40 h-px bg-jarvis-gold/30" />
+                  </div>
+                ))}
+              </div>
+            </div>
 
         {/* Center Column: Core Reactor */}
         <div className="md:col-span-6 md:col-start-4 flex flex-col items-center justify-center space-y-6 md:space-y-8 order-1 md:order-2 py-4 md:py-0">
@@ -859,39 +757,46 @@ export const JarvisUI: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Bottom Bar */}
+      {/* Unified Lower Header Panel */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed bottom-4 md:bottom-8 w-full max-w-4xl px-4 md:px-6 flex flex-col md:flex-row justify-between items-center gap-2 md:gap-0 text-[8px] md:text-[10px] font-mono text-white/20 uppercase tracking-[0.3em]"
+        className="fixed bottom-3 md:bottom-6 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-1rem)] md:w-[min(96vw,1200px)]"
       >
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Cpu size={12} />
-            <span>CALVIN 2026</span>
+        <div className="glass-panel border-white/10 px-3 md:px-4 py-3">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">
+            <LowerHeaderButton icon={currentView === 'main' ? Cpu : ArrowLeft} label="Core" active={currentView === 'main'} onClick={() => setCurrentView('main')} />
+            <LowerHeaderButton icon={MessageSquare} label="Chat" active={currentView === 'chat'} onClick={() => setCurrentView('chat')} />
+            <LowerHeaderButton icon={Terminal} label="Workshop" active={currentView === 'workshop'} onClick={() => setCurrentView('workshop')} />
+            <LowerHeaderButton icon={isListening ? Mic : MicOff} label={isListening ? 'Mute' : 'Unmute'} active={isListening} onClick={() => setIsListening(!isListening)} />
+            <LowerHeaderButton icon={Activity} label="Sync" active={false} onClick={() => { disconnect(); setTimeout(connect, 500); }} />
+            <LowerHeaderButton icon={CommandIcon} label="Commands" active={isCommandPaletteOpen} onClick={() => setIsCommandPaletteOpen(true)} />
           </div>
-          <span className="hidden md:inline">|</span>
-          <span>PROJECT X</span>
-        </div>
-        <div className="text-center md:text-right">
-          JARVIS AI VERSION 1
+
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pt-1 border-t border-white/5">
+            <LowerHeaderButton icon={Database} label="Memory" active={osModule === 'memory' && currentView === 'workshop'} onClick={() => { setCurrentView('workshop'); setOsModule('memory'); }} />
+            <LowerHeaderButton icon={Activity} label="Graph" active={osModule === 'graph' && currentView === 'workshop'} onClick={() => { setCurrentView('workshop'); setOsModule('graph'); }} />
+            <LowerHeaderButton icon={Terminal} label="Builder" active={osModule === 'builder' && currentView === 'workshop'} onClick={() => { setCurrentView('workshop'); setOsModule('builder'); }} />
+            <LowerHeaderButton icon={Music} label="Running" active={osModule === 'running' && currentView === 'workshop'} onClick={() => { setCurrentView('workshop'); setOsModule('running'); }} />
+            <LowerHeaderButton icon={Upload} label="Food" active={osModule === 'food' && currentView === 'workshop'} onClick={() => { setCurrentView('workshop'); setOsModule('food'); }} />
+          </div>
         </div>
       </motion.div>
     </div>
   );
 };
 
-const SidebarButton = ({ icon: Icon, label, active, onClick }: { icon: any, label: string, active: boolean, onClick: () => void }) => (
-  <button 
+const LowerHeaderButton = ({ icon: Icon, label, active, onClick }: { icon: any, label: string, active: boolean, onClick: () => void }) => (
+  <button
     onClick={onClick}
-    className={`w-full p-3 rounded-xl flex items-center gap-3 transition-all border ${
-      active 
-        ? 'bg-jarvis-gold/10 border-jarvis-gold/30 text-jarvis-gold shadow-[0_0_15px_rgba(255,215,0,0.1)]' 
-        : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
+    className={`shrink-0 px-3 py-2 rounded-xl border flex items-center gap-2 text-[10px] font-display uppercase tracking-widest transition-all ${
+      active
+        ? 'bg-jarvis-gold/15 border-jarvis-gold/40 text-jarvis-gold'
+        : 'bg-white/5 border-white/10 text-white/55 hover:text-white hover:border-white/20'
     }`}
   >
-    <Icon size={16} />
-    <span className="text-[10px] font-display uppercase tracking-widest">{label}</span>
+    <Icon size={14} />
+    <span>{label}</span>
   </button>
 );
 
@@ -906,25 +811,6 @@ const OSModuleTab = ({ active, onClick, label }: { active: boolean, onClick: () 
   >
     {label}
   </button>
-);
-
-const StatusIndicator = ({ label, active }: { label: string; active: boolean }) => (
-  <div className="flex flex-col items-center gap-1 md:gap-1.5">
-    <div className="relative">
-      <div className={`w-1 md:w-1.5 h-1 md:h-1.5 rounded-full transition-all duration-300 ${active ? 'bg-jarvis-gold shadow-[0_0_8px_rgba(255,215,0,0.8)]' : 'bg-white/10'}`} />
-      {active && (
-        <motion.div 
-          initial={{ scale: 1, opacity: 0.5 }}
-          animate={{ scale: 2.5, opacity: 0 }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          className="absolute inset-0 rounded-full bg-jarvis-gold/30"
-        />
-      )}
-    </div>
-    <span className={`text-[7px] md:text-[8px] font-mono uppercase tracking-widest transition-colors duration-300 ${active ? 'text-jarvis-gold' : 'text-white/20'}`}>
-      {label}
-    </span>
-  </div>
 );
 
 const StatusItem = ({ label, value, active }: { label: string; value?: string; active: boolean }) => (
