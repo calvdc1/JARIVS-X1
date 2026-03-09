@@ -31,21 +31,21 @@ export const AutomationBuilder: React.FC<AutomationBuilderProps> = ({ automation
   ];
 
   return (
-    <div className="glass-panel p-6 h-full overflow-y-auto scrollbar-hide">
+    <div className="glass-panel p-4 md:p-6 h-full overflow-y-auto scrollbar-hide">
       <div className="flex items-center gap-3 mb-8">
-        <Zap className="text-amber-400" size={20} />
-        <h2 className="font-display text-sm uppercase tracking-widest text-amber-400">Automation Engine</h2>
+        <Zap className="text-jarvis-accent" size={20} />
+        <h2 className="font-display text-sm uppercase tracking-widest text-jarvis-accent">Automation Engine</h2>
       </div>
 
       <div className="space-y-6">
         {/* New Automation Form */}
-        <div className="p-6 rounded-2xl bg-white/5 border border-white/10 border-dashed">
+        <div className="p-4 md:p-6 rounded-2xl bg-white/5 border border-white/10 border-dashed">
           <h3 className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-4">Create New Flow</h3>
           <div className="flex flex-col md:flex-row items-center gap-4">
             <select 
               value={newTrigger}
               onChange={(e) => setNewTrigger(e.target.value)}
-              className="w-full md:w-1/3 bg-black/40 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-400/50"
+              className="w-full md:w-1/3 bg-black/40 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-jarvis-accent/50"
             >
               <option value="">Select Trigger</option>
               {triggers.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
@@ -54,7 +54,7 @@ export const AutomationBuilder: React.FC<AutomationBuilderProps> = ({ automation
             <select 
               value={newAction}
               onChange={(e) => setNewAction(e.target.value)}
-              className="w-full md:w-1/3 bg-black/40 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-400/50"
+              className="w-full md:w-1/3 bg-black/40 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-jarvis-accent/50"
             >
               <option value="">Select Action</option>
               {actions.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
@@ -67,7 +67,7 @@ export const AutomationBuilder: React.FC<AutomationBuilderProps> = ({ automation
                   setNewAction('');
                 }
               }}
-              className="w-full md:w-auto p-3 rounded-xl bg-amber-400/20 text-amber-400 border border-amber-400/30 hover:bg-amber-400/30 transition-all flex items-center justify-center gap-2"
+              className="w-full md:w-auto p-3 rounded-xl bg-jarvis-accent/20 text-jarvis-accent border border-jarvis-accent/30 hover:bg-jarvis-accent/30 transition-all flex items-center justify-center gap-2"
             >
               <Plus size={16} />
               <span className="text-xs font-display uppercase tracking-widest">Deploy</span>
@@ -82,10 +82,10 @@ export const AutomationBuilder: React.FC<AutomationBuilderProps> = ({ automation
               key={auto.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between group"
+              className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col md:flex-row items-center justify-between group gap-4"
             >
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-lg bg-amber-400/10 text-amber-400">
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <div className="p-2 rounded-lg bg-jarvis-accent/10 text-jarvis-accent">
                   <Zap size={14} />
                 </div>
                 <div className="flex flex-col">
@@ -93,7 +93,7 @@ export const AutomationBuilder: React.FC<AutomationBuilderProps> = ({ automation
                   <span className="text-xs text-white/80">Active Automation Flow</span>
                 </div>
               </div>
-              <button className="p-2 text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100">
+              <button className="p-2 text-white/20 hover:text-red-400 transition-colors md:opacity-0 md:group-hover:opacity-100">
                 <Trash2 size={14} />
               </button>
             </motion.div>

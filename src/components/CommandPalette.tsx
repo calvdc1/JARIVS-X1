@@ -54,10 +54,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
           initial={{ opacity: 0, scale: 0.95, y: -20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -20 }}
-          className="w-full max-w-xl glass-panel overflow-hidden border-jarvis-blue/30 shadow-[0_0_50px_rgba(0,242,255,0.2)]"
+          className="w-full max-w-xl glass-panel overflow-hidden border-jarvis-accent/30 shadow-[0_0_50px_rgba(255,0,0,0.2)]"
         >
           <div className="p-4 flex items-center gap-3 border-b border-white/10">
-            <Search size={20} className="text-jarvis-blue" />
+            <Search size={20} className="text-jarvis-accent" />
             <input
               autoFocus
               type="text"
@@ -81,10 +81,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
                     onCommand(cmd.id);
                     onClose();
                   }}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-jarvis-blue/10 transition-colors group text-left"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-jarvis-accent/10 transition-colors group text-left"
                 >
-                  <div className="p-2 rounded-lg bg-white/5 border border-white/10 group-hover:border-jarvis-blue/30 transition-colors">
-                    <cmd.icon size={18} className="text-white/60 group-hover:text-jarvis-blue" />
+                  <div className="p-2 rounded-lg bg-white/5 border border-white/10 group-hover:border-jarvis-accent/30 transition-colors">
+                    <cmd.icon size={18} className="text-white/60 group-hover:text-jarvis-accent" />
                   </div>
                   <span className="text-sm text-white/80 group-hover:text-white">{cmd.label}</span>
                 </button>

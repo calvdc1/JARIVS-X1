@@ -1,6 +1,6 @@
 {
-  "name": "JARVIS X3",
-  "description": "A futuristic, voice-activated AI assistant inspired by Jarvis. Features real-time voice interaction, Spotify music control, and holographic image presentation.",
+  "name": "JARVIS X3 Command Center",
+  "description": "A futuristic, responsive AI dashboard inspired by Jarvis. Features a centralized command center, neural chat interface, and integrated OS workshop for PC and mobile.",
   "requestFramePermissions": [
     "microphone"
   ]

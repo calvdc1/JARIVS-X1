@@ -19,9 +19,10 @@ interface Decision {
 
 interface DecisionSimulatorProps {
   decisions: Decision[];
+  onSave?: (decision: any) => void;
 }
 
-export const DecisionSimulator: React.FC<DecisionSimulatorProps> = ({ decisions }) => {
+export const DecisionSimulator: React.FC<DecisionSimulatorProps> = ({ decisions, onSave }) => {
   return (
     <div className="glass-panel p-6 h-full overflow-y-auto scrollbar-hide">
       <div className="flex items-center gap-3 mb-8">

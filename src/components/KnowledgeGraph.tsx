@@ -20,9 +20,10 @@ interface KnowledgeGraphProps {
     nodes: Node[];
     links: Link[];
   };
+  onSync?: (data: any) => void;
 }
 
-export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ data }) => {
+export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ data, onSync }) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {

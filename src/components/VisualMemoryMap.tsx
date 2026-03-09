@@ -15,7 +15,7 @@ interface VisualMemoryMapProps {
 
 export const VisualMemoryMap: React.FC<VisualMemoryMapProps> = ({ memories }) => {
   const categories = {
-    profile: { icon: User, color: 'text-jarvis-blue', label: 'User Profile' },
+    profile: { icon: User, color: 'text-jarvis-accent', label: 'User Profile' },
     project: { icon: Zap, color: 'text-amber-400', label: 'Projects' },
     preference: { icon: Settings, color: 'text-emerald-400', label: 'Preferences' },
     goal: { icon: Target, color: 'text-purple-400', label: 'Goals' },
@@ -24,10 +24,10 @@ export const VisualMemoryMap: React.FC<VisualMemoryMapProps> = ({ memories }) =>
   };
 
   return (
-    <div className="glass-panel p-6 h-full overflow-y-auto scrollbar-hide">
+    <div className="glass-panel p-4 md:p-6 h-full overflow-y-auto scrollbar-hide">
       <div className="flex items-center gap-3 mb-8">
-        <Database className="text-jarvis-blue" size={20} />
-        <h2 className="font-display text-sm uppercase tracking-widest text-jarvis-blue">Neural Memory Map</h2>
+        <Database className="text-jarvis-accent" size={20} />
+        <h2 className="font-display text-sm uppercase tracking-widest text-jarvis-accent">Neural Memory Map</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -40,7 +40,7 @@ export const VisualMemoryMap: React.FC<VisualMemoryMapProps> = ({ memories }) =>
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.05 }}
-                className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-jarvis-blue/30 transition-all group"
+                className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-jarvis-accent/30 transition-all group"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <cat.icon size={14} className={cat.color} />

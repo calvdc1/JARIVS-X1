@@ -29,7 +29,6 @@ export const useLiveAPI = () => {
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<'main' | 'workshop' | 'standby' | 'chat'>('main');
   const [workspaceMode, setWorkspaceMode] = useState<'chat' | 'document' | 'code' | 'analysis' | 'creative' | 'analytical' | 'creative_divergence' | 'devils_advocate' | 'systems_thinking'>('chat');
-  const [voiceGender, setVoiceGender] = useState<'male' | 'female'>('male');
   const [personalities, setPersonalities] = useState<any[]>([]);
   const [activePersonalityId, setActivePersonalityId] = useState<string>('jarvis');
   const [automations, setAutomations] = useState<any[]>([]);
@@ -139,13 +138,15 @@ export const useLiveAPI = () => {
 
     const fetchExtraData = async () => {
       try {
-        const [autoRes, goalRes, learnRes, memRes, decRes, graphRes] = await Promise.all([
+        const [autoRes, goalRes, learnRes, memRes, decRes, graphRes, runRes, foodRes] = await Promise.all([
           fetch('/api/automations'),
           fetch('/api/goals'),
           fetch('/api/learning'),
           fetch('/api/memories'),
           fetch('/api/decisions'),
-          fetch('/api/graph')
+          fetch('/api/graph'),
+          fetch('/api/runs'),
+          fetch('/api/food')
         ]);
         setAutomations(await autoRes.json());
         setGoals(await goalRes.json());
@@ -153,12 +154,7 @@ export const useLiveAPI = () => {
         setMemories(await memRes.json());
         setDecisions(await decRes.json());
         setGraphData(await graphRes.json());
-        
-        const [runsRes, foodRes] = await Promise.all([
-          fetch('/api/runs'),
-          fetch('/api/food')
-        ]);
-        setRuns(await runsRes.json());
+        setRuns(await runRes.json());
         setFoodLogs(await foodRes.json());
       } catch (error) {
         console.error("Failed to fetch extra OS data");
@@ -278,7 +274,7 @@ export const useLiveAPI = () => {
 
     const currentTime = audioContext.currentTime;
     if (nextStartTimeRef.current < currentTime) {
-      nextStartTimeRef.current = currentTime + 0.1; // Increased buffer for smoother playback
+      nextStartTimeRef.current = currentTime + 0.02; // Reduced buffer for lower latency
     }
 
     source.start(nextStartTimeRef.current);
@@ -320,15 +316,6 @@ export const useLiveAPI = () => {
       });
     } catch (error) {
       console.error("Failed to save message");
-    }
-  };
-
-  const clearMessages = async () => {
-    try {
-      await fetch('/api/messages/clear', { method: 'POST' });
-      setMessages([]);
-    } catch (error) {
-      console.error("Failed to clear messages");
     }
   };
 
@@ -521,11 +508,6 @@ export const useLiveAPI = () => {
     } catch (error) {
       return { success: false, error: "Failed to switch personality" };
     }
-  };
-
-  const handleSwitchVoiceGender = (gender: 'male' | 'female') => {
-    setVoiceGender(gender);
-    return { success: true, gender };
   };
 
   const sendTextContext = useCallback((text: string) => {
@@ -733,7 +715,7 @@ export const useLiveAPI = () => {
           speechConfig: {
             voiceConfig: { 
               prebuiltVoiceConfig: { 
-                voiceName: voiceGender === 'female' ? 'Kore' : (activePersonalityId === 'friday' ? 'Kore' : activePersonalityId === 'edith' ? 'Puck' : 'Charon')
+                voiceName: activePersonalityId === 'friday' ? 'Kore' : activePersonalityId === 'edith' ? 'Puck' : 'Charon' 
               } 
             },
           },
@@ -891,17 +873,6 @@ export const useLiveAPI = () => {
                       mode: { type: Type.STRING, enum: ["chat", "document", "code", "analysis", "creative", "analytical", "creative_divergence", "devils_advocate", "systems_thinking"] }
                     },
                     required: ["mode"]
-                  }
-                },
-                {
-                  name: "switch_voice_gender",
-                  description: "Switch between male and female voice tones.",
-                  parameters: {
-                    type: Type.OBJECT,
-                    properties: {
-                      gender: { type: Type.STRING, enum: ["male", "female"] }
-                    },
-                    required: ["gender"]
                   }
                 },
                 {
@@ -1104,8 +1075,6 @@ export const useLiveAPI = () => {
                     result = await handleSyncGraph(args);
                   } else if (name === 'switch_personality') {
                     result = await handleSwitchPersonality(args.id as string);
-                  } else if (name === 'switch_voice_gender') {
-                    result = handleSwitchVoiceGender(args.gender as any);
                   }
 
                   if (result) {
@@ -1221,7 +1190,6 @@ export const useLiveAPI = () => {
     connect,
     disconnect,
     messages,
-    clearMessages,
     isSpeaking,
     isSpotifyConnected,
     presentedImage,
@@ -1239,14 +1207,11 @@ export const useLiveAPI = () => {
     personalities,
     activePersonalityId,
     handleSwitchPersonality,
-    handleSwitchVoiceGender,
     spotifyTrack,
     sendTextContext,
     transferPlayback,
     workspaceMode,
     setWorkspaceMode,
-    voiceGender,
-    setVoiceGender,
     userProfile,
     automations,
     goals,

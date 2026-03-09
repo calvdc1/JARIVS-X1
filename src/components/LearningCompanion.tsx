@@ -9,9 +9,10 @@ interface LearningData {
 
 interface LearningCompanionProps {
   data: LearningData | null;
+  onUpdate?: (progress: any) => void;
 }
 
-export const LearningCompanion: React.FC<LearningCompanionProps> = ({ data }) => {
+export const LearningCompanion: React.FC<LearningCompanionProps> = ({ data, onUpdate }) => {
   if (!data) return null;
 
   return (

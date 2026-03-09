@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, User, Bot, Terminal, Maximize2, Minimize2, Copy, Check, Trash2, FileText, Link2, Wand2, Code2 } from 'lucide-react';
+import { Send, User, Bot, Terminal, Maximize2, Minimize2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface Message {
@@ -11,14 +11,12 @@ interface Message {
 interface ChatSystemProps {
   messages: Message[];
   onSendMessage: (text: string) => void;
-  onClearChat?: () => void;
   isProcessing: boolean;
 }
 
-export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage, onClearChat, isProcessing }) => {
+export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage, isProcessing }) => {
   const [input, setInput] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,65 +33,22 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
     }
   };
 
-  const handleCopy = (text: string, index: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
-  };
-
-  const quickActions = [
-    {
-      label: 'Summarize',
-      icon: FileText,
-      prompt:
-        'Give me a concise summary of this discussion. Use bullet points and include key actions I should take next.'
-    },
-    {
-      label: 'Answer + Sources',
-      icon: Link2,
-      prompt:
-        'Answer my last question clearly and add a Sources section with links, docs, or references used.'
-    },
-    {
-      label: 'Prompt Builder',
-      icon: Wand2,
-      prompt:
-        'Create a high-quality reusable prompt template for my goal. Include variables, constraints, and an example output format.'
-    },
-    {
-      label: 'Build App Plan',
-      icon: Code2,
-      prompt:
-        'Help me build an app/website from scratch. Give product scope, tech stack, architecture, milestones, and first code steps.'
-    }
-  ];
-
   return (
     <motion.div 
       layout
       className={`glass-panel flex flex-col overflow-hidden transition-all duration-500 ${isExpanded ? 'fixed inset-4 z-50' : 'w-full h-full'}`}
     >
-      {/* Header */}
-      <div className="p-3 border-b border-jarvis-gold/20 flex items-center justify-between bg-jarvis-gold/5">
+      <div className="p-3 border-b border-jarvis-accent/20 flex items-center justify-between bg-jarvis-accent/5">
         <div className="flex items-center gap-2">
-          <Terminal size={14} className="text-jarvis-gold" />
-          <span className="text-[10px] font-display uppercase tracking-widest text-jarvis-gold">Neural Link Console</span>
+          <Terminal size={14} className="text-jarvis-accent" />
+          <span className="text-[10px] font-display uppercase tracking-widest text-jarvis-accent">Neural Link Console</span>
         </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={onClearChat}
-            className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-red-400"
-            title="Clear Chat"
-          >
-            <Trash2 size={14} />
-          </button>
-          <button 
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-jarvis-gold"
-          >
-            {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-          </button>
-        </div>
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="p-1 hover:bg-white/10 rounded transition-colors text-white/40 hover:text-jarvis-accent"
+        >
+          {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+        </button>
       </div>
 
       {/* Messages */}
@@ -110,24 +65,21 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div className={`max-w-[85%] flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${msg.role === 'user' ? 'border-jarvis-gold/30 bg-jarvis-gold/10' : 'border-white/10 bg-white/5'}`}>
-                  {msg.role === 'user' ? <User size={14} className="text-jarvis-gold" /> : <Bot size={14} className="text-white/60" />}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${msg.role === 'user' ? 'border-jarvis-accent/30 bg-jarvis-accent/10' : 'border-white/10 bg-white/5'}`}>
+                  {msg.role === 'user' ? <User size={14} className="text-jarvis-accent" /> : <Bot size={14} className="text-white/60" />}
                 </div>
-                <div className={`p-3 rounded-2xl text-sm leading-relaxed relative group ${
+                <div className={`p-4 rounded-2xl text-sm leading-relaxed relative overflow-hidden ${
                   msg.role === 'user' 
-                    ? 'bg-jarvis-gold/10 border border-jarvis-gold/20 text-white' 
-                    : 'bg-white/5 border border-white/10 text-white/80'
+                    ? 'bg-jarvis-accent/10 border border-jarvis-accent/30 text-white holographic-glow' 
+                    : 'bg-white/[0.03] border border-white/10 text-white/90'
                 }`}>
-                  <div className="markdown-body prose prose-invert prose-sm max-w-none">
+                  {/* Message Corner Accents */}
+                  <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-jarvis-accent/40" />
+                  <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-jarvis-accent/40" />
+                  
+                  <div className="markdown-body prose prose-invert prose-sm max-w-none relative z-10">
                     <ReactMarkdown>{msg.text}</ReactMarkdown>
                   </div>
-                  
-                  <button 
-                    onClick={() => handleCopy(msg.text, i)}
-                    className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/40 text-white/40 opacity-0 group-hover:opacity-100 transition-all hover:text-white"
-                  >
-                    {copiedIndex === i ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                  </button>
                 </div>
               </div>
             </motion.div>
@@ -149,7 +101,7 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
                     key={i}
                     animate={{ opacity: [0.2, 1, 0.2] }}
                     transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                    className="w-1.5 h-1.5 rounded-full bg-jarvis-gold"
+                    className="w-1.5 h-1.5 rounded-full bg-jarvis-accent"
                   />
                 ))}
               </div>
@@ -158,35 +110,19 @@ export const ChatSystem: React.FC<ChatSystemProps> = ({ messages, onSendMessage,
         )}
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-jarvis-gold/20 bg-black/20">
-        <div className="mb-3 flex flex-wrap gap-2">
-          {quickActions.map(({ label, icon: Icon, prompt }) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => onSendMessage(prompt)}
-              disabled={isProcessing}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-[10px] uppercase tracking-wider text-white/70 hover:border-jarvis-gold/40 hover:text-jarvis-gold transition-colors disabled:opacity-40"
-            >
-              <Icon size={12} />
-              {label}
-            </button>
-          ))}
-        </div>
-
+      <form onSubmit={handleSubmit} className="p-4 border-t border-jarvis-accent/20 bg-black/20">
         <div className="relative flex items-center">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask anything (summary, answer with sources, prompt, app/web build plan)..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm focus:outline-none focus:border-jarvis-gold/50 transition-colors placeholder:text-white/20"
+            placeholder="Type a command or question..."
+            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm focus:outline-none focus:border-jarvis-accent/50 transition-colors placeholder:text-white/20"
           />
           <button 
             type="submit"
             disabled={isProcessing || !input.trim()}
-            className="absolute right-2 p-2 text-jarvis-gold hover:bg-jarvis-gold/10 rounded-lg transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+            className="absolute right-2 p-2 text-jarvis-accent hover:bg-jarvis-accent/10 rounded-lg transition-all disabled:opacity-30 disabled:hover:bg-transparent"
           >
             <Send size={18} />
           </button>

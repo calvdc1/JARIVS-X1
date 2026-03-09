@@ -9,12 +9,12 @@ interface WorkspaceHUDProps {
 
 export const WorkspaceHUD: React.FC<WorkspaceHUDProps> = ({ mode, isProcessing }) => {
   const modes = {
-    chat: { icon: Activity, label: 'Neural Chat', color: 'text-jarvis-gold' },
+    chat: { icon: Activity, label: 'Neural Chat', color: 'text-jarvis-blue' },
     document: { icon: FileText, label: 'Document Mode', color: 'text-emerald-400' },
     code: { icon: Code, label: 'Code Mode', color: 'text-amber-400' },
     analysis: { icon: BarChart2, label: 'Analysis Mode', color: 'text-purple-400' },
     creative: { icon: Palette, label: 'Creative Mode', color: 'text-pink-400' },
-    analytical: { icon: Brain, label: 'Analytical', color: 'text-jarvis-gold' },
+    analytical: { icon: Brain, label: 'Analytical', color: 'text-blue-400' },
     creative_divergence: { icon: Zap, label: 'Divergence', color: 'text-yellow-400' },
     devils_advocate: { icon: Scale, label: 'Advocate', color: 'text-red-400' },
     systems_thinking: { icon: Network, label: 'Systems', color: 'text-indigo-400' },
@@ -23,10 +23,10 @@ export const WorkspaceHUD: React.FC<WorkspaceHUDProps> = ({ mode, isProcessing }
   const current = modes[mode];
 
   return (
-    <div className="fixed top-6 left-6 z-40 flex flex-col gap-4">
+    <div className="absolute top-6 left-6 z-40 flex flex-col gap-4 pointer-events-none">
       <motion.div 
         layout
-        className="glass-panel p-3 flex items-center gap-4 neon-border"
+        className="glass-panel p-3 flex items-center gap-4 neon-border pointer-events-auto"
       >
         <div className={`p-2 rounded-lg bg-white/5 border border-white/10 ${current.color}`}>
           <current.icon size={20} />
@@ -50,8 +50,8 @@ export const WorkspaceHUD: React.FC<WorkspaceHUDProps> = ({ mode, isProcessing }
       </motion.div>
 
       <div className="flex gap-2">
-        <MiniStat icon={Shield} label="Security" value="Level 5" color="text-jarvis-gold" />
-        <MiniStat icon={Cpu} label="Neural" value="98%" color="text-jarvis-gold" />
+        <MiniStat icon={Shield} label="Security" value="Level 5" color="text-jarvis-blue" />
+        <MiniStat icon={Cpu} label="Neural" value="98%" color="text-jarvis-blue" />
       </div>
     </div>
   );
